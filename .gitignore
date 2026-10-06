@@ -7,7 +7,7 @@ docker/nextcloud/certificates/*
 *.cache
 vendor
 node_modules
-js/
+/js/
 .shared
 result
 
