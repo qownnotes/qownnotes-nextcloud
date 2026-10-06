@@ -31,5 +31,11 @@
         <!-- The Override attribute needs PHP 8.3, but PHP 8.2 is supported -->
         <MissingOverrideAttribute errorLevel="suppress" />
         <ClassMustBeFinal errorLevel="suppress" />
+        <!-- Doctrine is part of the Nextcloud server, but not of the nextcloud/ocp stubs -->
+        <UndefinedDocblockClass>
+            <errorLevel type="suppress">
+                <referencedClass name="Doctrine\DBAL\Schema\Table" />
+            </errorLevel>
+        </UndefinedDocblockClass>
     </issueHandlers>
 </psalm>

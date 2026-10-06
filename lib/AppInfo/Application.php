@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\QOwnNotes\AppInfo;
 
 use OCA\QOwnNotes\Capabilities;
+use OCA\QOwnNotes\Listener\UserDeletedListener;
 use OCA\QOwnNotes\Middleware\UiEnabledMiddleware;
 use OCA\QOwnNotes\Service\AppSettings;
 use OCP\AppFramework\App;
@@ -19,6 +20,7 @@ use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\INavigationManager;
 use OCP\IURLGenerator;
 use OCP\L10N\IFactory;
+use OCP\User\Events\UserDeletedEvent;
 
 class Application extends App implements IBootstrap {
 	public const APP_ID = 'qownnotes';
@@ -39,6 +41,7 @@ class Application extends App implements IBootstrap {
 	public function register(IRegistrationContext $context): void {
 		$context->registerCapability(Capabilities::class);
 		$context->registerMiddleware(UiEnabledMiddleware::class);
+		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
 	}
 
 	public function boot(IBootContext $context): void {
