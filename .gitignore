@@ -1,0 +1,22 @@
+.idea/
+build/
+.directory
+docker/nextcloud/certificates/*
+*.gz
+*.db*
+*.cache
+vendor
+node_modules
+js/
+.shared
+result
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
