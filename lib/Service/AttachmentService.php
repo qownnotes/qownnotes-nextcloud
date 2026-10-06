@@ -143,6 +143,26 @@ class AttachmentService {
 		return str_repeat('../', $depth) . $targetPath;
 	}
 
+	/**
+	 * Adapts the relative links to media files and attachments of a note that is moved to another subfolder
+	 * depth, e.g. "media/image.png" → "../media/image.png", like QOwnNotes Desktop does when moving notes
+	 */
+	public static function rewriteRelativeLinks(string $content, string $fromSubFolderPath, string $toSubFolderPath): string {
+		$fromPrefix = self::getRelativeLink($fromSubFolderPath, '');
+		$toPrefix = self::getRelativeLink($toSubFolderPath, '');
+		if ($fromPrefix === $toPrefix) {
+			return $content;
+		}
+
+		$folders = self::MEDIA_FOLDER . '|' . self::ATTACHMENTS_FOLDER;
+		// Markdown links and images "](target" as well as HTML attributes src="target" and href="target"
+		$pattern = '#(\]\(\s*<?|\b(?:src|href)\s*=\s*["\'])((?:\.\./)*)((?:' . $folders . ')/)#';
+
+		return (string)preg_replace_callback($pattern, static function (array $match) use ($fromPrefix, $toPrefix): string {
+			return $match[2] === $fromPrefix ? $match[1] . $toPrefix . $match[3] : $match[0];
+		}, $content);
+	}
+
 	private function getOrCreateFolder(Folder $parent, string $name): Folder {
 		if ($parent->nodeExists($name)) {
 			$node = $parent->get($name);

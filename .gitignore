@@ -21,3 +21,7 @@ devenv.local.nix
 # pre-commit
 .pre-commit-config.yaml
 .phpunit.cache
+
+# Playwright
+tests/e2e/test-results
+tests/e2e/playwright-report

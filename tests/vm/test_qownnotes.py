@@ -1,7 +1,9 @@
 # NixOS VM test script; the "test_version" calls are appended by basic.nix
 # pyright: reportUndefinedVariable=false
 import base64
+import html
 import json
+import re
 import shlex
 from urllib.parse import quote, urlencode
 
@@ -13,6 +15,18 @@ AUTH = "admin:adminpass"
 
 def occ(node, command):
     return node.succeed(f"sudo -u nextcloud nextcloud-occ {command}")
+
+
+# Nextcloud caches app config values in APCu for up to 3 seconds (AppConfig::LOCAL_CACHE_TTL), and occ runs
+# in a separate process that can not clear the cache of PHP-FPM
+APP_CONFIG_CACHE_TTL = 3
+
+
+def occ_app_config(node, command):
+    """Runs an occ command that changes app config values and waits until the web server sees the change"""
+    output = occ(node, command)
+    node.sleep(APP_CONFIG_CACHE_TTL + 1)
+    return output
 
 
 def http(node, method, url, data=None, headers=None, expect=None, form=None):
@@ -88,15 +102,29 @@ def test_app_basics(node, label):
     assert qownnotes["tags"]["available"] is True
 
 
+def test_web_interface(node, label):
+    # The page loads the frontend bundle that was built by Nix
+    _, _, body = http(node, "GET", f"{APP_URL}/", expect=200)
+    match = re.search(r'src="([^"]*/qownnotes-main\.mjs[^"]*)"', body)
+    assert match, "The frontend script is missing in the page"
+    script_url = shlex.quote(BASE_URL + html.unescape(match.group(1)))
+    status, size, content_type = node.succeed(f"curl -sS -u {AUTH} -o /dev/null -w '%{{http_code}}|%{{size_download}}|%{{content_type}}' {script_url}").split("|", 2)
+    assert status == "200" and "javascript" in content_type and int(size) > 1000, (status, content_type, size)
+
+    # Client-side routes are served by the same page
+    for path in ["folder", "folder/Work/Project", "note/1"]:
+        http(node, "GET", f"{APP_URL}/{path}", expect=200)
+
+
 def test_api_only_mode(node, label):
     http(node, "GET", f"{APP_URL}/", expect=200)
 
-    occ(node, "config:app:set qownnotes ui_enabled --value=no")
+    occ_app_config(node, "config:app:set qownnotes ui_enabled --value=no")
     http(node, "GET", f"{APP_URL}/", expect=404)
     http(node, "GET", f"{APP_URL}/note/1", expect=404)
     assert capabilities(node)["qownnotes"]["ui_enabled"] is False
 
-    occ(node, "config:app:set qownnotes ui_enabled --value=yes")
+    occ_app_config(node, "config:app:set qownnotes ui_enabled --value=yes")
     http(node, "GET", f"{APP_URL}/", expect=200)
     assert capabilities(node)["qownnotes"]["ui_enabled"] is True
 
@@ -350,10 +378,10 @@ def test_legacy_api(node, label, pkg_version):
     failed = legacy_api(node, "restore_trashed", {"file_name": "/Legacy/unknown.md", "timestamp": 1})
     assert failed["result"] is False
 
-    occ(node, "app:disable files_versions")
+    occ_app_config(node, "app:disable files_versions")
     assert legacy_api(node, "app_info")["versions_app"] is False
     assert legacy_api(node, "versions", {"file_name": "/Legacy/versioned.md"})["error_messages"]
-    occ(node, "app:enable files_versions")
+    occ_app_config(node, "app:enable files_versions")
 
 
 NOTES_SQLITE = "/var/lib/nextcloud/data/admin/files/Notes/notes.sqlite"
@@ -477,6 +505,13 @@ def test_tags(node, label):
     assert "Project A|Nested moved.md|Archive/Project|0" in tag_links(node)
     api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested moved"})
 
+    # With the relink header, relative links to media files are adapted to the new subfolder depth
+    media_note, _, _ = api(node, "POST", "notes", {"title": "Media links", "content": "![i](media/x.png) [a](attachments/a.pdf)"})
+    moved_note, _, _ = api(node, "PUT", f"notes/{media_note['id']}", {"category": "Archive/Media"}, headers={"X-QOwnNotes-Relink-Tags": "1"})
+    assert moved_note["content"] == "![i](../../media/x.png) [a](../../attachments/a.pdf)", moved_note["content"]
+    moved_note, _, _ = api(node, "PUT", f"notes/{media_note['id']}", {"category": "Archive"})
+    assert moved_note["content"] == "![i](../../media/x.png) [a](../../attachments/a.pdf)", moved_note["content"]
+
     # Deleting a subfolder marks the links of its notes stale, QOwnNotes keeps them for 10 days
     deleted, _, _ = api(node, "DELETE", "subfolders?path=Archive")
     assert deleted["tagsUpdated"] is True
@@ -494,12 +529,14 @@ def test_tags(node, label):
     # A notes.sqlite with an unknown newer schema is only read
     node.succeed(f"cp {NOTES_SQLITE} /tmp/notes.sqlite.bak")
     sqlite(node, "UPDATE appData SET value = '17' WHERE name = 'database_version'")
+    # Changes within the same second have the same mtime and would not change the ETag of the file
+    node.succeed(f"touch -d '+1 minute' {NOTES_SQLITE}")
     occ(node, "files:scan --path=admin/files/Notes")
     tags, _, _ = api(node, "GET", "tags")
     assert tags["writable"] is False
     assert [t["name"] for t in tags["tags"]] == ["Important"]
     api(node, "POST", "tags", {"name": "New"}, expect=503)
-    node.succeed(f"cp /tmp/notes.sqlite.bak {NOTES_SQLITE} && chown nextcloud: {NOTES_SQLITE}")
+    node.succeed(f"cp /tmp/notes.sqlite.bak {NOTES_SQLITE} && chown nextcloud: {NOTES_SQLITE} && touch -d '+2 minutes' {NOTES_SQLITE}")
     occ(node, "files:scan --path=admin/files/Notes")
 
 
@@ -512,6 +549,7 @@ def test_version(node, label, pkg_version):
     node.succeed("curl -fsSL http://localhost/status.php | grep 'installed' | grep 'true'")
 
     test_app_basics(node, label)
+    test_web_interface(node, label)
     test_api_only_mode(node, label)
     test_notes_api_crud(node, label)
     test_notes_api_listing(node, label)

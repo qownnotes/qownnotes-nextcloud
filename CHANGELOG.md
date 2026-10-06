@@ -16,3 +16,8 @@
   - QOwnNotes API 1.1: note subfolders (`subfolders`) and tags of the note folder database
     `notes.sqlite` (`tags`, `tags/batch`, `tag-links`, `note/{id}/tags`), with safe, ETag-protected
     writes in the QOwnNotes Desktop format
+  - Web interface: note list with search, note subfolder tree with folder operations and drag and drop,
+    tag tree with filtering (all/any tags, child tags, untagged notes), tag editor, Markdown editor with
+    autosave and conflict handling, preview with checkable tasks, favorites and media uploads
+  - Notes renamed or moved by the web interface keep their tags, and relative links to media files and
+    attachments are adapted to the new subfolder depth (opt-in for API clients with `X-QOwnNotes-Relink-Tags`)

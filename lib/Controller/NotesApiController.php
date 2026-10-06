@@ -185,6 +185,7 @@ class NotesApiController extends ApiController {
 				$note = $result['note'];
 				if ($this->isRelinkRequested()) {
 					$this->tagService->relinkNote($userId, $result['from'], $result['to']);
+					$note = $this->rewriteMediaLinks($userId, $note, $result['from']->subFolderPath);
 				}
 			}
 
@@ -292,6 +293,20 @@ class NotesApiController extends ApiController {
 	 */
 	private function isRelinkRequested(): bool {
 		return $this->request->getHeader(self::RELINK_TAGS_HEADER) === '1';
+	}
+
+	/**
+	 * Adapts the relative links to media files and attachments if the note was moved to another subfolder depth;
+	 * only done for clients that opted in with the relink header, because other clients may do it themselves
+	 */
+	private function rewriteMediaLinks(string $userId, Note $note, string $fromSubFolderPath): Note {
+		if (!$this->settingsService->isRewriteMediaLinks($userId) || $note->isReadonly()) {
+			return $note;
+		}
+
+		$content = $note->getContent();
+		$rewritten = AttachmentService::rewriteRelativeLinks($content, $fromSubFolderPath, $note->getSubFolderPath());
+		return $rewritten === $content ? $note : $this->noteService->setContent($note, $rewritten);
 	}
 
 	/**

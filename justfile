@@ -63,6 +63,23 @@ vm-test-version version='34' args='':
 test-unit:
     composer run test:unit
 
+# Build the frontend into js/
+[group('dev')]
+build-js:
+    npm ci
+    npm run build
+
+# Run the JavaScript checks (ESLint, unit tests)
+[group('linter')]
+lint-js:
+    npm run lint
+    npm test
+
+# Run the end-to-end tests against the docker dev server (see docker/README.md)
+[group('test')]
+test-e2e args='':
+    cd tests/e2e && npm ci && CHROMIUM_PATH="${CHROMIUM_PATH:-$(command -v chromium || true)}" npx playwright test {{ args }}
+
 # Run all PHP checks (syntax, code style, static analysis, unit tests)
 [group('linter')]
 lint-php:
@@ -70,6 +87,14 @@ lint-php:
     composer run cs:check
     composer run psalm
     composer run test:unit
+
+# Run the code format checker in CI
+[group('ci')]
+ci-format-check:
+    composer install --no-interaction
+    npm ci
+    just format
+    just lint-js
 
 # Interactive NixOS test driver session for the combined Nextcloud versions.
 # Tries driverInteractive first (non-executing build), then falls back to driver (also non-executing) if needed.

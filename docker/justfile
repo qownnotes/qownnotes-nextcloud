@@ -1,0 +1,37 @@
+# Use `just <recipe>` to run a recipe
+# https://just.systems/man/en/
+
+# By default, run the `--list` command
+default:
+    @just --list
+
+# Variables
+# Try to use "docker compose" and fall back to "docker-compose" if not available
+
+dockerComposeCommand := `docker compose > /dev/null && echo docker compose || echo docker-compose`
+volumeName := "qownnotes-nextcloud_nextcloud"
+
+# Start the Nextcloud dev server on http://localhost:8081 (admin/admin)
+up:
+    {{ dockerComposeCommand }} up
+
+# Stop the Nextcloud dev server
+down:
+    {{ dockerComposeCommand }} down
+
+# Run an occ command, e.g. `just occ app:list`
+occ +args:
+    {{ dockerComposeCommand }} exec -u www-data app php occ {{ args }}
+
+# Open a shell in the container
+bash:
+    {{ dockerComposeCommand }} exec -u www-data app bash
+
+# Show the Nextcloud log
+show-log:
+    {{ dockerComposeCommand }} exec app tail -f /var/www/html/data/nextcloud.log
+
+# Remove the container and its data
+reset:
+    {{ dockerComposeCommand }} down
+    docker volume rm {{ volumeName }}

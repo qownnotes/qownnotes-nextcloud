@@ -34,12 +34,17 @@ The development environment is provided by [devenv](https://devenv.sh) (`direnv 
 
 ```bash
 composer install
+npm ci
+npm run build          # build the web interface into js/ (or `npm run watch`)
 just lint-php          # syntax, code style, static analysis and unit tests
+just lint-js           # ESLint and JavaScript unit tests
 just vm-test-version   # NixOS VM test against a single Nextcloud version (default: 34)
 just vm-test           # NixOS VM test against all supported Nextcloud versions
 ```
 
 The VM tests use the git-tracked files, so add new files with `git add` before running them.
+
+A Nextcloud development server with the app is in [docker/](docker/README.md), the Playwright end-to-end tests in [tests/e2e/](tests/e2e/README.md).
 
 ## License
 

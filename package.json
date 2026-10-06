@@ -1,0 +1,64 @@
+{
+  "name": "qownnotes",
+  "version": "26.10.0",
+  "private": true,
+  "description": "QOwnNotes for Nextcloud",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qownnotes/qownnotes-nextcloud"
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "Patrizio Bekerle <patrizio@bekerle.com>",
+  "type": "module",
+  "scripts": {
+    "build": "vite --mode production build",
+    "dev": "vite --mode development build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "watch": "vite --mode development build --watch"
+  },
+  "browserslist": [
+    "extends @nextcloud/browserslist-config"
+  ],
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@lezer/highlight": "^1.2.5",
+    "@nextcloud/auth": "^2.6.0",
+    "@nextcloud/axios": "^2.6.0",
+    "@nextcloud/dialogs": "^7.5.0",
+    "@nextcloud/files": "^4.1.0",
+    "@nextcloud/initial-state": "^3.0.0",
+    "@nextcloud/l10n": "^3.4.1",
+    "@nextcloud/logger": "^3.0.3",
+    "@nextcloud/router": "^3.2.0",
+    "@nextcloud/vue": "^9.13.1",
+    "dompurify": "^3.4.16",
+    "markdown-it": "^15.0.2",
+    "markdown-it-task-lists": "^2.1.1",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.43",
+    "vue-material-design-icons": "^5.3.1",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@nextcloud/browserslist-config": "^3.1.2",
+    "@nextcloud/eslint-config": "^9.0.1",
+    "@nextcloud/vite-config": "^2.5.4",
+    "eslint": "^10.12.0",
+    "jsdom": "^29.1.1",
+    "sass": "^1.105.1",
+    "vite": "^7.3.7",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}

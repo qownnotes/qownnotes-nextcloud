@@ -1,0 +1,5 @@
+# JavaScript and Vue files are formatted by ESLint with the Nextcloud code style
+*.js
+*.vue
+js/
+package-lock.json

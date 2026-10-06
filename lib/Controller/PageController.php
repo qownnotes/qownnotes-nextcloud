@@ -11,17 +11,24 @@ namespace OCA\QOwnNotes\Controller;
 
 use OCA\QOwnNotes\AppInfo\Application;
 use OCA\QOwnNotes\Attribute\RequiresUi;
+use OCA\QOwnNotes\Service\TagDatabase;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\AppFramework\Services\IInitialState;
 use OCP\IRequest;
 use OCP\Util;
 
 #[RequiresUi]
 class PageController extends Controller {
-	public function __construct(IRequest $request) {
+	public function __construct(
+		IRequest $request,
+		private IInitialState $initialState,
+		private IAppManager $appManager,
+	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
 
@@ -31,8 +38,12 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function index(): TemplateResponse {
+		$this->initialState->provideInitialState('config', [
+			'version' => $this->appManager->getAppVersion(Application::APP_ID),
+			'tagsAvailable' => TagDatabase::isAvailable(),
+		]);
+		// The styles are bundled into the script
 		Util::addScript(Application::APP_ID, 'qownnotes-main');
-		Util::addStyle(Application::APP_ID, 'qownnotes-main');
 
 		$response = new TemplateResponse(Application::APP_ID, 'main');
 		$policy = new ContentSecurityPolicy();

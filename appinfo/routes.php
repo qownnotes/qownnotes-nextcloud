@@ -11,6 +11,7 @@ return ['routes' => [
 	// Web interface (disabled in API-only mode)
 	['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 	['name' => 'page#index', 'url' => '/note/{id}', 'verb' => 'GET', 'postfix' => 'note', 'requirements' => ['id' => '\d+']],
+	['name' => 'page#index', 'url' => '/folder', 'verb' => 'GET', 'postfix' => 'root'],
 	['name' => 'page#index', 'url' => '/folder/{path}', 'verb' => 'GET', 'postfix' => 'folder', 'requirements' => ['path' => '.+']],
 
 	// Admin settings

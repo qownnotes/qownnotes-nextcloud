@@ -27,13 +27,31 @@ let
 
   packages = lib.genAttrs versions (version: tryAttr2605 "nextcloud${version}");
 
-  # Build the app from the git-tracked sources
-  # TODO: Build the frontend bundle (js/) with buildNpmPackage once the Vue frontend exists
-  qownnotesApp = pkgs26_05.runCommand "qownnotes-app" { src = ../../.; } ''
+  src = ../../.;
+
+  # Frontend bundle (js/), built from the git-tracked sources
+  # Update npmDepsHash after changes of package-lock.json with:
+  # nix run github:NixOS/nixpkgs/nixos-26.05#prefetch-npm-deps -- package-lock.json
+  qownnotesFrontend = pkgs26_05.buildNpmPackage {
+    pname = "qownnotes-frontend";
+    version = "0.0.0";
+    inherit src;
+    npmDepsHash = "sha256-TJhk/2DoUZM4zy4yy4Urv65XDh4x2YVcD+Rhw4eIXMg=";
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out
+      cp -r js $out/
+      runHook postInstall
+    '';
+  };
+
+  # The app as it is released: PHP sources, templates and the built frontend
+  qownnotesApp = pkgs26_05.runCommand "qownnotes-app" { inherit src; } ''
     mkdir -p $out
     cp -r $src/* $out/
     chmod -R u+w $out
-    rm -rf $out/tests $out/docs $out/vendor $out/node_modules
+    rm -rf $out/tests $out/docs $out/docker $out/src $out/vendor $out/node_modules $out/js
+    cp -r ${qownnotesFrontend}/js $out/js
   '';
 
   mkNode = version: pkg: {

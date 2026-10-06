@@ -40,4 +40,23 @@ class AttachmentServiceTest extends TestCase {
 		$this->assertSame('../media/a.png', AttachmentService::getRelativeLink('Work', 'media/a.png'));
 		$this->assertSame('../../attachments/a.pdf', AttachmentService::getRelativeLink('Work/Project', 'attachments/a.pdf'));
 	}
+
+	public static function rewrites(): array {
+		return [
+			'root to subfolder' => ['', 'Work', '![x](media/a.png)', '![x](../media/a.png)'],
+			'subfolder to root' => ['Work', '', '[a](../attachments/a.pdf)', '[a](attachments/a.pdf)'],
+			'deeper' => ['Work', 'Work/Project', '![](../media/a.png "t")', '![](../../media/a.png "t")'],
+			'html' => ['', 'Work', '<img src="media/a.png"> <a href=\'attachments/b.pdf\'>b</a>', '<img src="../media/a.png"> <a href=\'../attachments/b.pdf\'>b</a>'],
+			'angle brackets' => ['', 'Work', '![x](<media/a b.png>)', '![x](<../media/a b.png>)'],
+			'same depth' => ['Work', 'Other', '![x](../media/a.png)', '![x](../media/a.png)'],
+			'other folders' => ['', 'Work', '[n](other/note.md) [w](https://example.com/media/a.png)', '[n](other/note.md) [w](https://example.com/media/a.png)'],
+			'outside link kept' => ['Work', 'Work/Project', '![x](../../media/a.png)', '![x](../../media/a.png)'],
+			'plain text kept' => ['', 'Work', 'see media/a.png', 'see media/a.png'],
+		];
+	}
+
+	#[DataProvider('rewrites')]
+	public function testRewriteRelativeLinks(string $from, string $to, string $content, string $expected): void {
+		$this->assertSame($expected, AttachmentService::rewriteRelativeLinks($content, $from, $to));
+	}
 }

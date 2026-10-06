@@ -27,4 +27,4 @@ jobs:
       - name: 🔧 Install devenv.sh
         run: nix profile install nixpkgs#devenv
       - name: 🌳 Format code
-        run: devenv shell "if [ -f composer.json ]; then composer install; fi; if [ -f package.json ]; then npm ci; fi; just format"
+        run: devenv shell just -- ci-format-check

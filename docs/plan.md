@@ -135,7 +135,7 @@ appinfo/info.xml, routes.php
 lib/AppInfo/Application.php              # IBootstrap: conditional registration (see 4.7)
 lib/Capabilities.php
 lib/Controller/PageController.php        # web UI entry, 404 when UI disabled
-lib/Controller/WebApiController.php      # internal endpoints for the Vue UI
+lib/Controller/WebApiController.php      # internal endpoints for the Vue UI (not needed so far, see 4.3)
 lib/Controller/NotesApiController.php    # Notes API v1.0–1.4 compatible
 lib/Controller/QOwnNotesApiController.php # legacy endpoints + subfolders + tags
 lib/Controller/ApiResponseTrait.php      # ETag/Last-Modified/X-Notes-* headers, exception → status mapping
@@ -219,7 +219,7 @@ Implement Notes API **v1.0–1.4** per the [Notes API v1 docs](https://github.co
 - `PUT /settings` validates and normalizes `notesPath` (strip `..`, `.`, leading/trailing slashes) and creates the folder.
 - Attachments (1.4): `GET ?path=` resolves the path relative to the note's folder and refuses paths outside the notes folder. `POST` uploads into the root `media/` (images) or `attachments/` folder and returns a QOwnNotes-style relative link.
 - Notes in ignored subfolders (4.8) are never listed and cannot be created there (400).
-- **Tags and the Notes API**: the Notes API itself does not touch `notes.sqlite`, because Android currently relinks tags itself after renames and moves and uploads the file with `If-Match`. An implicit server-side relink would make Android's upload fail with 412 every time. Clients that switch to the tags API (4.9) can opt in to server-side relinking by sending `X-QOwnNotes-Relink-Tags: 1` on `PUT /notes/{id}`.
+- **Tags and the Notes API**: the Notes API itself does not touch `notes.sqlite`, because Android currently relinks tags itself after renames and moves and uploads the file with `If-Match`. An implicit server-side relink would make Android's upload fail with 412 every time. Clients that switch to the tags API (4.9) can opt in to server-side relinking by sending `X-QOwnNotes-Relink-Tags: 1` on `PUT /notes/{id}`. The header also enables the rewriting of relative media and attachment links when a note changes its subfolder depth (4.8), and marks the tag links of deleted notes stale. The web UI always sends it.
 
 Conformance is tested against the documented behavior **and** against the actual requests of `NextcloudBackend.kt` (section 3). Nextcloud Notes' own `tests/api` suite is a useful reference for writing equivalent tests.
 
@@ -382,10 +382,10 @@ Already in this repository (ported from qownnotesapi):
 Still to add (phase 0/1):
 
 - `composer.json` with php-cs-fixer (`nextcloud/coding-standard`), psalm, phpunit, `nextcloud/ocp` (stubs per supported version). Add `.php-cs-fixer.dist.php` (required by the shared php-cs-fixer hook) and `psalm.xml`.
-- `package.json` with Vite, eslint (`@nextcloud/eslint-config`), stylelint, vitest.
-- `docker/` dev environment ported from qownnotesapi (Nextcloud pre-release image, port 8081, app mounted into `custom_apps`, signing script). Then extend `term.kdl` with the docker compose and `npm run watch` panes again.
+- ~~`package.json` with Vite, eslint (`@nextcloud/eslint-config`), stylelint, vitest.~~ Done (without stylelint).
+- Done: `docker/` dev environment (official Nextcloud image instead of the pre-release image, signing script still missing) and Playwright tests in `tests/e2e/`. Originally: `docker/` dev environment ported from qownnotesapi (Nextcloud pre-release image, port 8081, app mounted into `custom_apps`, signing script). Then extend `term.kdl` with the docker compose and `npm run watch` panes again.
 - `tests/fixtures/notes-sqlite/`: real `notes.sqlite` files produced by QOwnNotes Desktop (schema 15 and 16, empty, with nested tags, with stale links, WAL-mode negative case, corrupt negative case) and by Android, plus a script to regenerate them with a pinned desktop build (`nix run nixpkgs#qownnotes` in headless/test mode, or the desktop integration tests).
-- Nix build of the app for the VM test including the frontend: `buildNpmPackage` with `npmDepsHash` for `js/` and a vendored or FOD Composer install, replacing the plain `runCommand` copy in `tests/vm/basic.nix`.
+- Done for the frontend (Composer has no runtime dependencies yet): Nix build of the app for the VM test including the frontend: `buildNpmPackage` with `npmDepsHash` for `js/` and a vendored or FOD Composer install, replacing the plain `runCommand` copy in `tests/vm/basic.nix`.
 - VM test extension: port the qownnotesapi endpoint assertions (WebDAV `PUT`/`DELETE` + `note/*`) to `/apps/qownnotes/`, add a Notes API conformance script (create/list/chunk/prune/ETag/412/settings/attachments), subfolder operations, tag round trips (upload a fixture `notes.sqlite` via WebDAV → tag/rename/move via the API → download and verify with Python's `sqlite3`: schema untouched, header non-WAL, links relinked), and API-only-mode checks.
 - Release tooling: `sign-app.sh` (exclude dev files such as `devenv.*`, `flake.*`, `.envrc`, `term.kdl`, `justfile`, `tests`, `src`, `node_modules`), `create_release.yml`, CalVer versioning, `AGENTS.md` (version location, signing exclusions).
 
