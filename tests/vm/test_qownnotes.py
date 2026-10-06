@@ -3,7 +3,7 @@
 import base64
 import json
 import shlex
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 BASE_URL = "http://localhost"
 APP_URL = f"{BASE_URL}/index.php/apps/qownnotes"
@@ -264,6 +264,245 @@ def test_notes_api_settings(node, label):
     assert "PUT" in headers.get("access-control-allow-methods", "")
 
 
+def legacy_api(node, endpoint, params=None, method="GET"):
+    query = "?" + urlencode(params or {}, doseq=True)
+    data, _, _ = http_json(node, method, f"{API_URL}/note/{endpoint}{query}")
+    return data
+
+
+def test_legacy_api(node, label, pkg_version):
+    """Ported from the qownnotesapi VM test: the responses must stay compatible for QOwnNotes Desktop and Android"""
+    missing_path_info = legacy_api(node, "app_info", {"notes_path": "/Missing"})
+    assert missing_path_info["user"] == "admin"
+    assert missing_path_info["versions_app"] is True
+    assert missing_path_info["trash_app"] is True
+    assert missing_path_info["versioning"] is True
+    assert missing_path_info["app_version"] == "26.10.0"
+    assert missing_path_info["server_version"].startswith(label + ".")
+    assert missing_path_info["notes_path_exists"] is False
+
+    dav(node, "MKCOL", "Legacy", expect=201)
+    dav(node, "MKCOL", "Legacy/Sub", expect=201)
+    dav(node, "MKCOL", "LegacyOther", expect=201)
+    notes_path_info = legacy_api(node, "app_info", {"notes_path": "/Legacy"})
+    assert notes_path_info["notes_path_exists"] is True
+
+    original_note = "First version of the note\n"
+    current_note = "Current version of the note\n"
+    dav(node, "PUT", "Legacy/versioned.md", original_note)
+    node.succeed("sleep 1.1")
+    dav(node, "PUT", "Legacy/versioned.md", current_note)
+
+    versions = legacy_api(node, "versions", {"file_name": "/Legacy/versioned.md"})
+    assert versions["file_name"] == "/Legacy/versioned.md"
+    assert versions["error_messages"] == []
+    assert len(versions["versions"]) >= 1
+    assert all(version["data"] != current_note for version in versions["versions"]), "The current version must not be listed"
+    assert any(version["data"] == original_note for version in versions["versions"])
+    assert all(version["timestamp"] > 0 for version in versions["versions"])
+    assert all(version["humanReadableTimestamp"] for version in versions["versions"])
+    assert all(version["diffHtml"] for version in versions["versions"])
+    assert "<del>Current</del><ins>First</ins>" in versions["versions"][0]["diffHtml"], versions["versions"][0]["diffHtml"]
+
+    missing = legacy_api(node, "versions", {"file_name": "/Legacy/missing.md"})
+    assert missing["versions"] == []
+    assert missing["error_messages"] == ["Requested file was not found!"]
+
+    dav(node, "PUT", "Legacy/trashed.md", "Trashed Markdown note\n")
+    dav(node, "PUT", "Legacy/custom.qnote", "Custom extension note\n")
+    dav(node, "PUT", "Legacy/ignored.json", '{"ignored": true}\n')
+    dav(node, "PUT", "Legacy/Sub/nested.md", "Nested note\n")
+    dav(node, "PUT", "LegacyOther/outside.md", "Note outside requested directory\n")
+    for path in ["Legacy/trashed.md", "Legacy/custom.qnote", "Legacy/ignored.json", "Legacy/Sub/nested.md", "LegacyOther/outside.md"]:
+        dav(node, "DELETE", path, expect=204)
+
+    trash = legacy_api(node, "trashed", {"dir": "/Legacy/", "extensions[]": ["qnote"]})
+    assert trash["directory"] == "Legacy"
+    trashed_notes = {note["fileName"]: note for note in trash["notes"]}
+    assert set(trashed_notes) == {"trashed.md", "custom.qnote"}, set(trashed_notes)
+    assert trashed_notes["trashed.md"]["noteName"] == "trashed"
+    assert trashed_notes["trashed.md"]["data"] == "Trashed Markdown note\n"
+    assert trashed_notes["custom.qnote"]["data"] == "Custom extension note\n"
+    assert all(note["timestamp"] > 0 for note in trash["notes"])
+    assert all(note["dateString"] for note in trash["notes"])
+
+    # Notes deleted from subfolders are only included on request
+    recursive = legacy_api(node, "trashed", {"dir": "/Legacy/", "recursive": "1"})
+    assert {note["fileName"] for note in recursive["notes"]} == {"trashed.md", "nested.md"}
+
+    deleted_note = trashed_notes["trashed.md"]
+    restore = legacy_api(node, "restore_trashed", {"file_name": "/Legacy/trashed.md", "timestamp": deleted_note["timestamp"]})
+    assert restore["result"] is True
+    assert restore["filename"] == "trashed.md"
+    assert restore["path"] == f"//trashed.md.d{deleted_note['timestamp']}"
+    assert dav(node, "GET", "Legacy/trashed.md")[2] == "Trashed Markdown note\n"
+
+    trash_after_restore = legacy_api(node, "trashed", {"dir": "/Legacy/", "extensions[]": ["qnote"]})
+    remaining_names = {note["fileName"] for note in trash_after_restore["notes"]}
+    assert "trashed.md" not in remaining_names
+    assert "custom.qnote" in remaining_names
+
+    nested = next(n for n in recursive["notes"] if n["fileName"] == "nested.md")
+    restore = legacy_api(node, "restore_trashed", {"file_name": "Legacy/Sub/nested.md", "timestamp": nested["timestamp"]}, method="POST")
+    assert restore["result"] is True
+    assert dav(node, "GET", "Legacy/Sub/nested.md")[2] == "Nested note\n"
+
+    failed = legacy_api(node, "restore_trashed", {"file_name": "/Legacy/unknown.md", "timestamp": 1})
+    assert failed["result"] is False
+
+    occ(node, "app:disable files_versions")
+    assert legacy_api(node, "app_info")["versions_app"] is False
+    assert legacy_api(node, "versions", {"file_name": "/Legacy/versioned.md"})["error_messages"]
+    occ(node, "app:enable files_versions")
+
+
+NOTES_SQLITE = "/var/lib/nextcloud/data/admin/files/Notes/notes.sqlite"
+
+
+def sqlite(node, query):
+    """Queries notes.sqlite directly, like QOwnNotes Desktop would read it"""
+    return node.succeed(f"sqlite3 -separator '|' {NOTES_SQLITE} {shlex.quote(query)}").strip()
+
+
+def tag_links(node):
+    return sqlite(node, "SELECT t.name, l.note_file_name, l.note_sub_folder_path, l.stale_date IS NOT NULL FROM noteTagLink l JOIN tag t ON t.id = l.tag_id ORDER BY t.name, l.note_file_name").splitlines()
+
+
+def find_note(node, title):
+    notes, _, _ = api(node, "GET", "notes?exclude=content")
+    return next(n for n in notes if n["title"] == title)
+
+
+def test_subfolders(node, label):
+    tree, _, _ = api(node, "GET", "subfolders")
+    assert tree["path"] == ""
+    names = [child["name"] for child in tree["children"]]
+    assert "Work" in names and "Other" in names, names
+    assert "media" not in names and ".hidden" not in names and "attachments" not in names, names
+    work = next(child for child in tree["children"] if child["name"] == "Work")
+    assert work["noteCount"] == 1
+    assert work["noteCountRecursive"] == 2
+    assert [child["path"] for child in work["children"]] == ["Work/Project"]
+
+    created, _, _ = api(node, "POST", "subfolders", {"path": "Empty/Deep"})
+    assert created["path"] == "Empty/Deep"
+    tree, _, _ = api(node, "GET", "subfolders")
+    empty = next(child for child in tree["children"] if child["name"] == "Empty")
+    assert empty["noteCountRecursive"] == 0
+    assert empty["children"][0]["name"] == "Deep"
+
+    api(node, "POST", "subfolders", {"path": "media"}, expect=400)
+    api(node, "POST", "subfolders", {"path": "Work/.git"}, expect=400)
+    api(node, "POST", "subfolders", {"path": "Empty"}, expect=400)
+    api(node, "PATCH", "subfolders", {"path": "Work", "newPath": "Work/Inside"}, expect=400)
+    api(node, "PATCH", "subfolders", {"path": "Missing", "newPath": "Other2"}, expect=404)
+    api(node, "DELETE", "subfolders?path=", expect=400)
+
+    moved, _, _ = api(node, "PATCH", "subfolders", {"path": "Empty/Deep", "newPath": "Deeper"})
+    assert moved["folder"]["path"] == "Deeper"
+    assert dav_exists(node, "Notes/Deeper")
+    api(node, "DELETE", "subfolders?path=Deeper")
+    api(node, "DELETE", "subfolders?path=Empty")
+    assert not dav_exists(node, "Notes/Empty")
+
+
+def test_tags(node, label):
+    tags, _, _ = api(node, "GET", "tags")
+    assert tags["etag"] is None
+    assert tags["tags"] == []
+
+    nested = find_note(node, "Nested")
+    renamed = find_note(node, "Renamed note")
+
+    # The first change creates notes.sqlite with the QOwnNotes Desktop schema
+    note_tags, _, _ = api(node, "PUT", f"note/{nested['id']}/tags", {"tagPaths": [["Work", "Project A"], "Important"]})
+    assert sorted(tuple(t["path"]) for t in note_tags["tags"]) == [("Important",), ("Work", "Project A")]
+    etag = note_tags["etag"]
+    assert etag
+    assert sqlite(node, "SELECT value FROM appData WHERE name = 'database_version'") == "16"
+    assert sqlite(node, "PRAGMA journal_mode") == "delete"
+    assert sqlite(node, "PRAGMA quick_check") == "ok"
+    assert tag_links(node) == ["Important|Nested.md|Work/Project|0", "Project A|Nested.md|Work/Project|0"]
+
+    tags, _, _ = api(node, "GET", "tags")
+    assert tags["etag"] == etag
+    assert tags["writable"] is True
+    assert tags["schemaVersion"] == 16
+    top = {t["name"]: t for t in tags["tags"]}
+    assert set(top) == {"Important", "Work"}
+    assert top["Important"]["noteCount"] == 1
+    assert top["Work"]["children"][0]["name"] == "Project A"
+    assert top["Work"]["children"][0]["noteCount"] == 1
+
+    # Changes need the current ETag of notes.sqlite
+    api(node, "POST", "tags", {"name": "Archive"}, headers={"If-Match": '"outdated"'}, expect=412)
+    created, headers, _ = api(node, "POST", "tags", {"name": "Archive", "color": "#FF8800"}, headers={"If-Match": f'"{etag}"'})
+    assert created["tag"]["name"] == "Archive"
+    assert created["tag"]["color"] == "#ff8800"
+    assert headers["etag"].strip('"') == created["etag"] != etag
+    api(node, "POST", "tags", {"name": "archive"}, expect=400)
+
+    updated, _, _ = api(node, "PATCH", f"tags/{created['tag']['id']}", {"name": "Old stuff", "parentId": top["Work"]["id"]})
+    assert updated["tag"]["path"] == ["Work", "Old stuff"]
+    api(node, "PATCH", f"tags/{top['Work']['id']}", {"parentId": created["tag"]["id"]}, expect=400)
+
+    # Batch: several changes in one transaction and one upload
+    batch, _, _ = api(node, "POST", "tags/batch", {"operations": [
+        {"op": "link", "noteId": renamed["id"], "tagId": top["Important"]["id"]},
+        {"op": "link", "noteId": renamed["id"], "tagPath": ["Work", "Old stuff"]},
+        {"op": "unlink", "noteId": nested["id"], "tagId": top["Important"]["id"]},
+    ]})
+    assert batch["etag"]
+    assert tag_links(node) == ["Important|Renamed note.md|Work|0", "Old stuff|Renamed note.md|Work|0", "Project A|Nested.md|Work/Project|0"]
+    api(node, "POST", "tags/batch", {"operations": [{"op": "explode"}]}, expect=400)
+    assert len(tag_links(node)) == 3, "Failed batches must not change anything"
+
+    links, _, _ = api(node, "GET", "tag-links")
+    by_file = {link["fileName"]: link for link in links["links"]}
+    assert by_file["Nested.md"]["noteId"] == nested["id"]
+    assert by_file["Renamed note.md"]["noteId"] == renamed["id"]
+
+    note_tags, _, _ = api(node, "GET", f"note/{renamed['id']}/tags")
+    assert sorted(t["name"] for t in note_tags["tags"]) == ["Important", "Old stuff"]
+
+    # Moving a subfolder moves the tag links of its notes
+    moved, _, _ = api(node, "PATCH", "subfolders", {"path": "Work/Project", "newPath": "Archive/Project"})
+    assert moved["tagsRelinked"] is True
+    assert "Project A|Nested.md|Archive/Project|0" in tag_links(node)
+
+    # The Notes API only relinks tags on request (QOwnNotes Android relinks them itself)
+    api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested moved"}, headers={"X-QOwnNotes-Relink-Tags": "1"})
+    assert "Project A|Nested moved.md|Archive/Project|0" in tag_links(node)
+    api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested"})
+    assert "Project A|Nested moved.md|Archive/Project|0" in tag_links(node)
+    api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested moved"})
+
+    # Deleting a subfolder marks the links of its notes stale, QOwnNotes keeps them for 10 days
+    deleted, _, _ = api(node, "DELETE", "subfolders?path=Archive")
+    assert deleted["tagsUpdated"] is True
+    assert "Project A|Nested moved.md|Archive/Project|1" in tag_links(node)
+    note_tags, _, _ = api(node, "GET", f"note/{renamed['id']}/tags")
+    assert len(note_tags["tags"]) == 2
+
+    # Deleting a tag deletes its children and links
+    tags, _, _ = api(node, "GET", "tags")
+    work = next(t for t in tags["tags"] if t["name"] == "Work")
+    api(node, "DELETE", f"tags/{work['id']}", headers={"If-Match": f'"{tags["etag"]}"'})
+    assert tag_links(node) == ["Important|Renamed note.md|Work|0"]
+    assert sqlite(node, "SELECT COUNT(*) FROM tag") == "1"
+
+    # A notes.sqlite with an unknown newer schema is only read
+    node.succeed(f"cp {NOTES_SQLITE} /tmp/notes.sqlite.bak")
+    sqlite(node, "UPDATE appData SET value = '17' WHERE name = 'database_version'")
+    occ(node, "files:scan --path=admin/files/Notes")
+    tags, _, _ = api(node, "GET", "tags")
+    assert tags["writable"] is False
+    assert [t["name"] for t in tags["tags"]] == ["Important"]
+    api(node, "POST", "tags", {"name": "New"}, expect=503)
+    node.succeed(f"cp /tmp/notes.sqlite.bak {NOTES_SQLITE} && chown nextcloud: {NOTES_SQLITE}")
+    occ(node, "files:scan --path=admin/files/Notes")
+
+
 def test_version(node, label, pkg_version):
     print(f"Testing Nextcloud {label} ({pkg_version})")
     # Run one Nextcloud version at a time to keep memory usage low
@@ -278,5 +517,8 @@ def test_version(node, label, pkg_version):
     test_notes_api_listing(node, label)
     test_notes_api_attachments(node, label)
     test_notes_api_settings(node, label)
+    test_legacy_api(node, label, pkg_version)
+    test_subfolders(node, label)
+    test_tags(node, label)
 
     node.shutdown()

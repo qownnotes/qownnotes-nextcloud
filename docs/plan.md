@@ -199,12 +199,12 @@ Published under the `qownnotes` key only:
     "notes_path": "Notes",
     "versions_app": true,
     "trash_app": true,
-    "tags": { "available": true, "writable": true, "schema_version": 16 }
+    "tags": { "available": true, "writable_schema_versions": [15, 16] }
   }
 }
 ```
 
-`tags.available` is false when `pdo_sqlite` is missing on the server, and `tags.writable` is false when the user's `notes.sqlite` has an unknown schema version (see 4.9).
+`tags.available` is false when `pdo_sqlite` is missing on the server. Whether the user's own `notes.sqlite` is writable is reported by `GET /api/v1/tags` (`writable`, `schemaVersion`), because reading it in every capabilities request would be too expensive.
 
 The app must **not** publish a `notes` capability. Nextcloud merges capabilities from all apps, so publishing `notes` would overwrite or merge with the real Notes app's entry. Nextcloud Notes Android would then call `/apps/notes/...` with wrong version assumptions, and QOwnNotes Android would wrongly detect the Notes app. The VM test asserts this.
 
@@ -328,7 +328,7 @@ With these endpoints Android can later stop downloading and uploading the whole 
 
 - **File names and titles**: the file name (without suffix) is the note name. A new note's first line is the title as a heading. Creating a note through the web UI uses the QOwnNotes format (`# Title` by default, underlined title optional).
 - **Media and attachments**: QOwnNotes stores images in `media/` and files in `attachments/` at the note folder root and links them relatively from the note's depth. Uploads via web UI or API go there, and the preview resolves these links.
-- **Ignored files**: hidden files, `notes.sqlite` (and its `-journal`), conflict copies, and everything in ignored folders are not notes.
+- **Ignored files**: hidden files, files without a note suffix (e.g. `notes.sqlite`) and everything in ignored folders are not notes. Conflict copies with a note suffix are notes, like in QOwnNotes Desktop.
 - **Suffixes**: `.md`, `.txt` plus custom suffixes (desktop allows `.markdown`, `.org`, `.note`, …). Default `.md`.
 - **Favorites**: stored as the Nextcloud favorite file tag (`ITagManager`, `_$!<Favorite>!$_`), the same as Notes and Files, so favorites are shared. They are independent from QOwnNotes tags.
 
@@ -336,7 +336,7 @@ With these endpoints Android can later stop downloading and uploading the whole 
 
 - Notes and subfolders: files only.
 - Tags: `<notesPath>/notes.sqlite` only (4.9).
-- Table `qownnotes_meta` (`id`, `user_id`, `file_id`, `last_update`, `etag`, `content_etag`, `file_etag`) caches per-note ETags and modification state for `pruneBefore`, list ETags and cheap listing. It is a cache that can always be rebuilt from files and is invalidated by file event listeners (`NodeWrittenEvent`, `NodeDeletedEvent`, `NodeRenamedEvent`). A repair step cleans up orphaned rows.
+- Table `qownnotes_meta` (`id`, `user_id`, `file_id`, `last_update`, `etag`, `content_etag`, `file_etag`) caches per-note ETags and modification state for `pruneBefore`, list ETags and cheap listing. It is a cache that can always be rebuilt from files. It is validated lazily against the file ETags on every request, so changes from any client are detected without file event listeners. Rows of deleted notes are removed while listing, and rows of deleted users by a `UserDeletedEvent` listener.
 - Parsed `notes.sqlite` cache: `ICache` (distributed cache if configured), keyed by user and file ETag.
 - User settings (`notesPath`, `fileSuffix`, `ignoreNoteSubFolders`, `subfoldersEnabled`, editor prefs) in `IConfig` user values under the `qownnotes` app ID. On first use, `notesPath` defaults to the user's Nextcloud Notes setting if present (`notes/notesPath`), otherwise `Notes`, so switching Android from Notes to QOwnNotes is seamless.
 

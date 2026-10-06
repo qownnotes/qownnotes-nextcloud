@@ -16,12 +16,14 @@ use OCA\QOwnNotes\Exception\PreconditionFailedException;
 use OCA\QOwnNotes\Http\ApiResponder;
 use OCA\QOwnNotes\Http\ChunkCursor;
 use OCA\QOwnNotes\Model\Note;
+use OCA\QOwnNotes\Model\NoteLocation;
 use OCA\QOwnNotes\Service\AttachmentService;
 use OCA\QOwnNotes\Service\MetaService;
 use OCA\QOwnNotes\Service\NoteFolderService;
 use OCA\QOwnNotes\Service\NoteService;
 use OCA\QOwnNotes\Service\NoteTitle;
 use OCA\QOwnNotes\Service\SettingsService;
+use OCA\QOwnNotes\Service\TagService;
 use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -50,6 +52,7 @@ class NotesApiController extends ApiController {
 		private SettingsService $settingsService,
 		private NoteFolderService $folderService,
 		private AttachmentService $attachmentService,
+		private TagService $tagService,
 		private IMimeTypeDetector $mimeTypeDetector,
 		private ITimeFactory $timeFactory,
 	) {
@@ -180,6 +183,9 @@ class NotesApiController extends ApiController {
 			if ($titleChanged || $categoryChanged) {
 				$result = $this->noteService->move($userId, $note, $titleChanged ? $title : null, $categoryChanged ? $category : null);
 				$note = $result['note'];
+				if ($this->isRelinkRequested()) {
+					$this->tagService->relinkNote($userId, $result['from'], $result['to']);
+				}
 			}
 
 			if ($modified !== null && $modified > 0 && $modified !== $note->getModified()) {
@@ -199,7 +205,11 @@ class NotesApiController extends ApiController {
 	public function destroy(int $id): Response {
 		return $this->responder->respond(function () use ($id): array {
 			$userId = $this->responder->getUserId();
-			$this->noteService->delete($this->noteService->get($userId, $id));
+			$note = $this->noteService->get($userId, $id);
+			$this->noteService->delete($note);
+			if ($this->isRelinkRequested()) {
+				$this->tagService->markNoteStale($userId, NoteLocation::fromNote($note));
+			}
 			return [];
 		});
 	}
@@ -275,6 +285,13 @@ class NotesApiController extends ApiController {
 			$this->attachmentService->delete($userId, $this->noteService->get($userId, $noteid), $path);
 			return [];
 		});
+	}
+
+	/**
+	 * Whether the client wants the server to update the tag links in notes.sqlite on renames, moves and deletions
+	 */
+	private function isRelinkRequested(): bool {
+		return $this->request->getHeader(self::RELINK_TAGS_HEADER) === '1';
 	}
 
 	/**
