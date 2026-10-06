@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Patrizio Bekerle <patrizio@bekerle.com>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>qownnotes</id>
+    <name>QOwnNotes</name>
+    <summary>Edit your QOwnNotes notes on the web and sync them with QOwnNotes Desktop and Android</summary>
+    <description><![CDATA[QOwnNotes for Nextcloud lets you view and edit the notes of your [QOwnNotes](https://www.qownnotes.org) note folder in the Nextcloud web interface, including note subfolders and the tags stored in the note folder's `notes.sqlite`.
+
+It also provides the server APIs for the [QOwnNotes desktop app](https://www.qownnotes.org) (note versions and trash) and the [QOwnNotes Android app](https://github.com/qownnotes/qownnotes-android) (a Nextcloud Notes API compatible note API).
+
+Administrators can disable the web interface to only provide the APIs.]]></description>
+    <version>26.10.0</version>
+    <licence>agpl</licence>
+    <author mail="patrizio@bekerle.com" homepage="https://www.bekerle.com/">Patrizio Bekerle</author>
+    <namespace>QOwnNotes</namespace>
+
+    <documentation>
+        <admin>https://github.com/qownnotes/qownnotes-nextcloud</admin>
+    </documentation>
+
+    <category>office</category>
+    <category>organization</category>
+    <category>tools</category>
+    <website>https://www.qownnotes.org</website>
+    <bugs>https://github.com/qownnotes/qownnotes-nextcloud/issues</bugs>
+    <repository type="git">https://github.com/qownnotes/qownnotes-nextcloud.git</repository>
+
+    <dependencies>
+        <php min-version="8.2" max-version="8.5"/>
+        <nextcloud min-version="32" max-version="35"/>
+    </dependencies>
+
+    <settings>
+        <admin>OCA\QOwnNotes\Settings\Admin</admin>
+        <admin-section>OCA\QOwnNotes\Settings\AdminSection</admin-section>
+    </settings>
+</info>

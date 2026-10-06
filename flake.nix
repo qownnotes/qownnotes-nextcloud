@@ -14,13 +14,18 @@
     let
       system = "x86_64-linux";
       pkgs26_05 = import nixpkgs26_05 { inherit system; };
-      combinedTest = import ./tests/vm/basic.nix {
-        inherit pkgs26_05;
-      };
+      mkTest = versions: import ./tests/vm/basic.nix { inherit pkgs26_05 versions; };
     in
     {
       nixosTests = {
-        nextcloud-qownnotes = combinedTest;
+        nextcloud-qownnotes = mkTest [
+          "32"
+          "33"
+          "34"
+        ];
+        nextcloud-qownnotes-32 = mkTest [ "32" ];
+        nextcloud-qownnotes-33 = mkTest [ "33" ];
+        nextcloud-qownnotes-34 = mkTest [ "34" ];
       };
     };
 }

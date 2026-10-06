@@ -1,12 +1,21 @@
 # https://wiki.nixos.org/wiki/NixOS_VM_tests
-{ pkgs26_05, ... }:
+{
+  pkgs26_05,
+  # Nextcloud major versions to test, e.g. [ "34" ] for a quick single-version run
+  versions ? [
+    "32"
+    "33"
+    "34"
+  ],
+  ...
+}:
 
 let
   inherit (pkgs26_05) lib;
   # Safe lookup on pkgs26_05 catching eval errors
   tryAttr2605 =
     name:
-    if pkgs26_05 != null && builtins.hasAttr name pkgs26_05 then
+    if builtins.hasAttr name pkgs26_05 then
       (
         let
           t = builtins.tryEval (builtins.getAttr name pkgs26_05);
@@ -16,57 +25,20 @@ let
     else
       null;
 
-  # Flexible PHP package set selection for composer
-  phpPkgSet =
-    pkgs26_05.php85Packages
-      or (pkgs26_05.php84Packages or (pkgs26_05.php83Packages or (pkgs26_05.php82Packages or null)));
-  composerPkg =
-    if phpPkgSet != null && phpPkgSet ? composer then phpPkgSet.composer else pkgs26_05.composer; # pkgs26_05.composer as last resort
-  phpInterp = pkgs26_05.php or (if phpPkgSet != null && phpPkgSet ? php then phpPkgSet.php else null);
+  packages = lib.genAttrs versions (version: tryAttr2605 "nextcloud${version}");
 
-  pkg32 = tryAttr2605 "nextcloud32";
-  pkg33 = tryAttr2605 "nextcloud33";
-  pkg34 = tryAttr2605 "nextcloud34";
-
-  has32 = pkg32 != null;
-  has33 = pkg33 != null;
-  has34 = pkg34 != null;
-
-  # Build the app once (using primary pkgs set)
+  # Build the app from the git-tracked sources
   # TODO: Build the frontend bundle (js/) with buildNpmPackage once the Vue frontend exists
-  qownnotesApp =
-    pkgs26_05.runCommand "qownnotes-app"
-      {
-        src = ../../.;
-        buildInputs = lib.filter (x: x != null) [
-          composerPkg
-          phpInterp
-        ];
-        preferLocalBuild = true;
-        allowSubstitutes = false; # ensure we always build locally (still won't rebuild if output already exists)
-      }
-      ''
-        mkdir -p $out
-        cp -r $src/* $out/
-        chmod -R u+w $out
-        if [ -n "$FORCE_REBUILD_NONCE" ]; then
-          echo "$FORCE_REBUILD_NONCE" > $out/.force-rebuild-nonce
-          echo "Force rebuild nonce embedded: $FORCE_REBUILD_NONCE"
-        fi
-        export COMPOSER_ALLOW_SUPERUSER=1
-        export HOME=$TMPDIR
-        if [ -f "$out/composer.json" ]; then
-          if [ -d "$out/vendor" ]; then
-            echo "Running composer install (offline, expects vendor already vendored)"
-            (cd $out && composer install --no-dev --optimize-autoloader --no-interaction || composer dump-autoload --optimize || true)
-          else
-            echo "No vendor directory found; skipping composer install to avoid network (would fail)"
-          fi
-        fi
-      '';
+  qownnotesApp = pkgs26_05.runCommand "qownnotes-app" { src = ../../.; } ''
+    mkdir -p $out
+    cp -r $src/* $out/
+    chmod -R u+w $out
+    rm -rf $out/tests $out/docs $out/vendor $out/node_modules
+  '';
 
-  mkNode = pkg: name: {
-    ${name} = _: {
+  mkNode = version: pkg: {
+    "nextcloud${version}" = _: {
+      virtualisation.memorySize = 1536;
       services.nextcloud = {
         enable = true;
         package = pkg;
@@ -82,75 +54,30 @@ let
         };
         extraAppsEnable = true;
       };
-      networking.firewall.allowedTCPPorts = [
-        80
-        443
-      ];
       environment.etc."nextcloud-adminpass".text = "adminpass";
+      # For verifying notes.sqlite files written by the app
+      environment.systemPackages = [ pkgs26_05.sqlite ];
     };
   };
 
-  node32 = if has32 then mkNode pkg32 "nextcloud32" else { };
-  node33 = if has33 then mkNode pkg33 "nextcloud33" else { };
-  node34 = if has34 then mkNode pkg34 "nextcloud34" else { };
+  nodes = lib.foldl' (acc: version: acc // mkNode version packages.${version}) { } versions;
 
+  testCalls = lib.concatMapStringsSep "\n" (
+    version: ''test_version(nextcloud${version}, "${version}", "${packages.${version}.version}")''
+  ) versions;
 in
 # Fail early if any required Nextcloud package is missing
-assert (lib.assertMsg has32 "Missing required package: nextcloud32 (expected in pkgs26_05)");
-assert (lib.assertMsg has33 "Missing required package: nextcloud33 (expected in pkgs26_05)");
-assert (lib.assertMsg has34 "Missing required package: nextcloud34 (expected in pkgs26_05)");
+assert lib.all (
+  version: lib.assertMsg (packages.${version} != null) "Missing required package: nextcloud${version}"
+) versions;
 
 pkgs26_05.testers.nixosTest {
   name = "nextcloud_qownnotes";
-  nodes = node32 // node33 // node34;
+  inherit nodes;
   interactive.sshBackdoor.enable = true; # provides ssh-config & vsock access (needs host vsock support)
-  testScript = ''
-    import json
+  testScript = builtins.readFile ./test_qownnotes.py + ''
 
-    print("Has32=${toString has32} Has33=${toString has33} Has34=${toString has34}")
-    start_all()
-
-    def capabilities(node):
-        output = node.succeed(
-            "curl -fsS -u admin:adminpass -H 'OCS-APIRequest: true' -H 'Accept: application/json' "
-            "http://localhost/ocs/v2.php/cloud/capabilities"
-        )
-        return json.loads(output)["ocs"]["data"]["capabilities"]
-
-    # TODO: Port the Notes API and legacy QOwnNotesAPI endpoint tests (see docs/plan.md, phase 5)
-    def test_version(node, label, pkg_version):
-        print(f"Testing Nextcloud {label} ({pkg_version})")
-        node.wait_for_unit("phpfpm-nextcloud.service")
-        node.wait_for_unit("nginx.service")
-        node.succeed("curl -fsSL http://localhost/status.php | grep 'installed' | grep 'true'")
-        node.succeed("sudo -u nextcloud nextcloud-occ app:list --enabled | grep -i 'qownnotes:' || (echo 'App missing ({label})'; sudo -u nextcloud nextcloud-occ app:list; exit 1)")
-        assert "200" in node.succeed("curl -s -o /dev/null -w '%{http_code}' http://localhost/login"), "Login page needs to show up!"
-        node.succeed("sudo -u nextcloud nextcloud-occ status | grep -i 'version:'")
-
-        caps = capabilities(node)
-        assert "qownnotes" in caps, "The qownnotes capability needs to be published"
-        assert "notes" not in caps, "The notes capability belongs to the Nextcloud Notes app"
-
-    ${
-      if has32 then
-        ''test_version(nextcloud32, "32", "${pkg32.version}")''
-      else
-        ''print("Skipping Nextcloud 32: package not present")''
-    }
-
-    ${
-      if has33 then
-        ''test_version(nextcloud33, "33", "${pkg33.version}")''
-      else
-        ''print("Skipping Nextcloud 33: package not present")''
-    }
-
-    ${
-      if has34 then
-        ''test_version(nextcloud34, "34", "${pkg34.version}")''
-      else
-        ''print("Skipping Nextcloud 34: package not present")''
-    }
+    ${testCalls}
     print("ALL_TESTS_DONE")
   '';
 }

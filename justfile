@@ -53,6 +53,24 @@ open-browser:
 vm-test args='':
     nix build -L .#nixosTests.nextcloud-qownnotes {{ args }}
 
+# Run tests for a single version of Nextcloud (faster and needs less memory)
+[group('test')]
+vm-test-version version='34' args='':
+    nix build -L .#nixosTests.nextcloud-qownnotes-{{ version }} {{ args }}
+
+# Run the PHP unit tests
+[group('test')]
+test-unit:
+    composer run test:unit
+
+# Run all PHP checks (syntax, code style, static analysis, unit tests)
+[group('linter')]
+lint-php:
+    composer run lint
+    composer run cs:check
+    composer run psalm
+    composer run test:unit
+
 # Interactive NixOS test driver session for the combined Nextcloud versions.
 # Tries driverInteractive first (non-executing build), then falls back to driver (also non-executing) if needed.
 # Usage examples:

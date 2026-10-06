@@ -1,0 +1,37 @@
+{
+  "name": "qownnotes/qownnotes-nextcloud",
+  "description": "QOwnNotes for Nextcloud",
+  "type": "project",
+  "license": "AGPL-3.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "OCA\\QOwnNotes\\": "lib/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "OCA\\QOwnNotes\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "nextcloud/coding-standard": "^1.5",
+    "nextcloud/ocp": "dev-stable32",
+    "phpunit/phpunit": "^11",
+    "vimeo/psalm": "^6"
+  },
+  "scripts": {
+    "lint": "find . -name \\*.php -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l",
+    "cs:check": "php-cs-fixer fix --dry-run --diff",
+    "cs:fix": "php-cs-fixer fix",
+    "psalm": "psalm --no-cache --threads=1",
+    "test:unit": "phpunit -c tests/phpunit.xml"
+  },
+  "config": {
+    "platform": {
+      "php": "8.2.27"
+    },
+    "sort-packages": true,
+    "optimize-autoloader": true
+  },
+  "prefer-stable": true
+}
