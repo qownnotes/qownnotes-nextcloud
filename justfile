@@ -88,6 +88,11 @@ lint-php:
     composer run psalm
     composer run test:unit
 
+# Build the frontend and create the signed release archive in build/ (see docs/release.md)
+[group('release')]
+sign-app: build-js
+    cd docker && just sign-app
+
 # Run the code format checker in CI
 [group('ci')]
 ci-format-check:

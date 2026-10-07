@@ -10,6 +10,7 @@ default:
 
 dockerComposeCommand := `docker compose > /dev/null && echo docker compose || echo docker-compose`
 volumeName := "qownnotes-nextcloud_nextcloud"
+certificateDir := env('QOWNNOTES_CERTIFICATE_DIR', home_directory() / '.nextcloud/certificates')
 
 # Start the Nextcloud dev server on http://localhost:8081 (admin/admin)
 up:
@@ -30,6 +31,10 @@ bash:
 # Show the Nextcloud log
 show-log:
     {{ dockerComposeCommand }} exec app tail -f /var/www/html/data/nextcloud.log
+
+# Create the signed release archive in build/ from the built frontend (see docs/release.md)
+sign-app:
+    {{ dockerComposeCommand }} run --rm --no-deps --entrypoint sh -v "{{ certificateDir }}:/var/www/certificates:ro" app /var/www/html/custom_apps/qownnotes/docker/sign-app.sh
 
 # Remove the container and its data
 reset:

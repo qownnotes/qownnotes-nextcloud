@@ -1,7 +1,7 @@
 .idea/
 build/
 .directory
-docker/nextcloud/certificates/*
+appinfo/signature.json
 *.gz
 *.db*
 *.cache

@@ -13,7 +13,17 @@ layout {
       args "vm-test"
       start_suspended true
     }
-    pane
+    pane {
+      command "npm"
+      args "run" "watch"
+      start_suspended true
+    }
+    pane {
+      command "just"
+      args "up"
+      cwd "docker"
+      start_suspended true
+    }
   }
   pane size=1 borderless=true {
     plugin location="zellij:status-bar"

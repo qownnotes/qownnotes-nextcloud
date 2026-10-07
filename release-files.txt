@@ -1,0 +1,12 @@
+# Files and folders of the release archive (docker/sign-app.sh) and the app in the VM test.
+# Add new runtime files and folders here; everything else (sources, tests, tooling) is left out.
+appinfo
+css
+img
+js
+l10n
+lib
+templates
+CHANGELOG.md
+COPYING
+README.md

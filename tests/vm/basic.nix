@@ -45,12 +45,17 @@ let
     '';
   };
 
-  # The app as it is released: PHP sources, templates and the built frontend
+  # The app as it is released (the files of release-files.txt) with the built frontend
+  releaseFiles = lib.filter (line: line != "" && !lib.hasPrefix "#" line) (
+    lib.splitString "\n" (builtins.readFile ../../release-files.txt)
+  );
   qownnotesApp = pkgs26_05.runCommand "qownnotes-app" { inherit src; } ''
     mkdir -p $out
-    cp -r $src/* $out/
-    chmod -R u+w $out
-    rm -rf $out/tests $out/docs $out/docker $out/src $out/vendor $out/node_modules $out/js
+    for file in ${lib.escapeShellArgs releaseFiles}; do
+      if [ -e "$src/$file" ] && [ "$file" != js ]; then
+        cp -r "$src/$file" $out/
+      fi
+    done
     cp -r ${qownnotesFrontend}/js $out/js
   '';
 

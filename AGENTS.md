@@ -14,7 +14,15 @@ Nextcloud app `qownnotes` (namespace `OCA\QOwnNotes`, PHP in `lib/`). See `docs/
 
 ## Version Number Location
 
-The version number is located in `appinfo/info.xml` within the `<version>` tag (CalVer, e.g. `26.10.0`).
+The version number is located in `appinfo/info.xml` within the `<version>` tag (CalVer, e.g. `26.10.0`). Keep `version` in `package.json` in sync; the release workflow checks it.
+
+## Release Files
+
+The release archive (`docker/sign-app.sh`, `just sign-app`) and the app in the VM test only contain the files and folders listed in `release-files.txt`. Add new runtime files or folders there. The release process is described in `docs/release.md`.
+
+## Documentation
+
+API changes must be reflected in `docs/api/` (`notes-api.md`, `qownnotes-api.md`), changes of the `notes.sqlite` handling in `docs/notes-sqlite.md`.
 
 ## Checks
 

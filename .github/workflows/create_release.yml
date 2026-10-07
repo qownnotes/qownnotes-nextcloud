@@ -1,0 +1,48 @@
+name: "🗃️ Create release"
+
+# Creates a draft release with the release notes of the version in appinfo/info.xml from CHANGELOG.md.
+# The signed release archive is created locally with `just sign-app` and attached to it, see docs/release.md.
+
+on:
+  push:
+    branches:
+      - release
+    tags-ignore:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  create_release:
+    name: "🗃️ Create draft release"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v5
+
+      - name: "🔢 Read version and release notes"
+        run: |
+          VERSION=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' appinfo/info.xml | head -n 1)
+          if [ "$(jq -r .version package.json)" != "${VERSION}" ]; then
+            echo "The version in package.json differs from appinfo/info.xml" >&2
+            exit 1
+          fi
+          # The section of the version, without its heading
+          awk -v heading="## ${VERSION}" '$0 == heading { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md >release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "CHANGELOG.md has no section for version ${VERSION}" >&2
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >>"$GITHUB_ENV"
+          cat release-notes.md
+
+      - name: "🗃️ Create draft release"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Release v${{ env.VERSION }}
+          body_path: release-notes.md
+          draft: true
+          prerelease: false
