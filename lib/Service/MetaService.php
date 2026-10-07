@@ -102,6 +102,7 @@ class MetaService {
 
 		$etag = md5(json_encode([
 			$note->getId(),
+			$note->getFile()->getPath(),
 			$note->getTitle(),
 			$note->getSubFolderPath(),
 			$note->getModified(),

@@ -8,6 +8,8 @@
     `occ config:app:set qownnotes ui_enabled --value=no`
   - Nextcloud Notes API v1.4 compatible note API for QOwnNotes Android under
     `/index.php/apps/qownnotes/api/v1/` (notes, settings, attachments, chunked listing, ETags)
+  - Note responses include `internalPath` for Android's version history requests; client request
+    contracts for Android and Desktop are checked in the multi-version VM test
   - Notes follow the QOwnNotes conventions: categories are note subfolders, internal and ignored
     subfolders are skipped, new notes are numbered like in QOwnNotes Desktop, and media files and
     attachments are stored in the `media` and `attachments` folders

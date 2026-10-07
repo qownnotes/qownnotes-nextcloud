@@ -9,10 +9,13 @@ declare(strict_types=1);
 
 namespace OCA\QOwnNotes\Tests\unit\Service;
 
+use OCA\QOwnNotes\Exception\NoteNotFoundException;
+use OCA\QOwnNotes\Model\Note;
 use OCA\QOwnNotes\Service\FavoriteService;
 use OCA\QOwnNotes\Service\NoteFolderService;
 use OCA\QOwnNotes\Service\NoteService;
 use OCA\QOwnNotes\Service\SettingsService;
+use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\Node;
 use PHPUnit\Framework\TestCase;
@@ -56,5 +59,27 @@ class NoteServiceTest extends TestCase {
 
 	public function testSanitizeTitleFallsBackToDefault(): void {
 		$this->assertSame('Note', $this->service->sanitizeTitle('///'));
+	}
+
+	public function testInternalPathIsRelativeToRequestingUser(): void {
+		$this->assertSame('/Archive/Notes/Work/Meeting.note', $this->internalPath('Archive/Notes/Work/Meeting.note'));
+	}
+
+	public function testInternalPathRejectsFilesOutsideUserFolder(): void {
+		$this->expectException(NoteNotFoundException::class);
+		$this->internalPath(null);
+	}
+
+	private function internalPath(?string $relativePath): string {
+		$file = $this->createMock(File::class);
+		$file->method('getPath')->willReturn('/alice/files/Archive/Notes/Work/Meeting.note');
+		$userFolder = $this->createMock(Folder::class);
+		$userFolder->expects($this->once())->method('getRelativePath')
+			->with('/alice/files/Archive/Notes/Work/Meeting.note')->willReturn($relativePath);
+		$folders = $this->createMock(NoteFolderService::class);
+		$folders->expects($this->once())->method('getUserFolder')->with('alice')->willReturn($userFolder);
+		$service = new NoteService($folders, $this->createMock(SettingsService::class), $this->createMock(FavoriteService::class));
+
+		return $service->getInternalPath('alice', new Note($file, 'Work', false));
 	}
 }

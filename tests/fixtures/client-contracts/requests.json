@@ -1,0 +1,70 @@
+{
+  "settings": { "method": "GET", "path": "settings" },
+  "updateSettings": {
+    "method": "PUT",
+    "path": "settings",
+    "payload": { "notesPath": "Contracts/Notes", "fileSuffix": ".qnote" }
+  },
+  "createNote": {
+    "method": "POST",
+    "path": "notes",
+    "payload": {
+      "title": "Contract {client}",
+      "content": "# Contract\n\nOriginal",
+      "category": "Work/Project",
+      "modified": 1700000000,
+      "favorite": false
+    }
+  },
+  "getNote": { "method": "GET", "path": "notes/{id}" },
+  "updateNote": {
+    "method": "PUT",
+    "path": "notes/{id}",
+    "headers": { "If-Match": "\"{etag}\"" },
+    "payload": {
+      "title": "Renamed {client}",
+      "content": "# Contract\n\nUpdated",
+      "category": "Other",
+      "modified": 1700000001,
+      "favorite": true
+    }
+  },
+  "deleteNote": { "method": "DELETE", "path": "notes/{id}" },
+  "androidAppInfo": {
+    "method": "GET",
+    "path": "note/app_info",
+    "query": { "format": "json", "notes_path": "/Contracts/Notes" }
+  },
+  "desktopAppInfo": {
+    "method": "GET",
+    "path": "note/app_info",
+    "query": {
+      "format": "json",
+      "notes_path": "/Contracts/Notes/",
+      "version_test": "1"
+    }
+  },
+  "versions": {
+    "method": "GET",
+    "path": "note/versions",
+    "query": { "format": "json", "file_name": "{remotePath}" }
+  },
+  "trash": {
+    "method": "GET",
+    "path": "note/trashed",
+    "query": {
+      "format": "json",
+      "dir": "{directory}",
+      "extensions[]": ["md", "txt", "qnote"]
+    }
+  },
+  "restore": {
+    "method": "GET",
+    "path": "note/restore_trashed",
+    "query": {
+      "format": "json",
+      "file_name": "{remotePath}",
+      "timestamp": "{timestamp}"
+    }
+  }
+}

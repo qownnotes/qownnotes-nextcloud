@@ -215,6 +215,7 @@ The app must **not** publish a `notes` capability. Nextcloud merges capabilities
 Implement Notes API **v1.0–1.4** per the [Notes API v1 docs](https://github.com/nextcloud/notes/blob/main/docs/api/v1.md):
 
 - Note attributes: `id` (file ID), `etag`, `readonly`, `content`, `title`, `category`, `favorite`, `modified`. `category` is the subfolder path (`/`-separated), using the same rules as 4.8.
+- The read-only QOwnNotes extension `internalPath` is the note's path inside the user's files root, with a leading `/` and the actual suffix. Android requires it to call the legacy versions API.
 - `GET /notes`: `category`, `exclude`, `pruneBefore`, `chunkSize`/`chunkCursor`. Response headers `ETag`, `Last-Modified`, `X-Notes-Chunk-Cursor`, `X-Notes-Chunk-Pending`. Pruned notes contain only `id`. The chunk cursor is an opaque, versioned string (for example base64 of `{lastUpdate, lastNoteId, version}`), and an invalid cursor returns 400.
 - `If-None-Match` → 304, `If-Match` mismatch → 412 with the current note in the body.
 - Status codes: 400 invalid input, 403 read-only, 404 missing, 412 conflict, 423 locked, 507 insufficient storage.
@@ -416,7 +417,7 @@ Progress: phases 0–7 are implemented, phase 8 is prepared: release tooling (`r
 - **NixOS VM test**: multi-version Nextcloud (32–34+), real WebDAV + API calls, `notes.sqlite` round trips verified with Python `sqlite3`, coexistence with `notes`/`qownnotesapi`, API-only mode. This is the main regression gate.
 - **Concurrency tests**: two parallel tag writes (one wins, the other retries or gets 412), a WebDAV upload of `notes.sqlite` during an API write, and a lock timeout.
 - **Frontend**: vitest for stores and utilities (tag tree, filter logic, relative media link rewriting), Playwright for E2E smoke tests against docker.
-- **Client contract tests**: a fixture set of recorded requests from `NextcloudBackend.kt`, `NoteFolderTagDatabase.kt` and `cloudservice.cpp` replayed against the server, so client-relevant fields and file formats can't silently change.
+- **Client contract tests**: request templates transcribed from pinned versions of `NextcloudBackend.kt` and `cloudservice.cpp` live in `tests/fixtures/client-contracts/` and are replayed in the multi-version VM test (including Android's `internalPath` dependency for versions). These are synthetic fixtures, not network recordings. Recorded tag-file requests and real Desktop/Android database fixtures remain follow-up work.
 
 ## 9. `notes.sqlite` Concurrency Model
 

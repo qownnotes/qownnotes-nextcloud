@@ -99,6 +99,7 @@ pkgs26_05.testers.nixosTest {
   inherit nodes;
   interactive.sshBackdoor.enable = true; # provides ssh-config & vsock access (needs host vsock support)
   testScript = builtins.readFile ./test_qownnotes.py + ''
+    CLIENT_REQUESTS = json.loads(${builtins.toJSON (builtins.readFile ../fixtures/client-contracts/requests.json)})
 
     ${testCalls}
     print("ALL_TESTS_DONE")

@@ -42,7 +42,7 @@ class NotesApiController extends ApiController {
 	/** Request header that lets clients opt in to server-side relinking of tags in notes.sqlite on renames/moves */
 	public const RELINK_TAGS_HEADER = 'X-QOwnNotes-Relink-Tags';
 
-	private const NOTE_ATTRIBUTES = ['id', 'etag', 'readonly', 'content', 'title', 'category', 'favorite', 'modified'];
+	private const NOTE_ATTRIBUTES = ['id', 'etag', 'readonly', 'content', 'title', 'category', 'favorite', 'modified', 'internalPath'];
 
 	public function __construct(
 		IRequest $request,
@@ -324,6 +324,9 @@ class NotesApiController extends ApiController {
 		];
 		if (!in_array('content', $exclude, true)) {
 			$data['content'] = $note->getContent();
+		}
+		if (!in_array('internalPath', $exclude, true)) {
+			$data['internalPath'] = $this->noteService->getInternalPath($this->responder->getUserId(), $note);
 		}
 
 		foreach ($exclude as $attribute) {

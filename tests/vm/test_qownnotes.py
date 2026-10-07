@@ -67,7 +67,7 @@ def http_json(node, method, url, payload=None, headers=None, expect=200):
 
 
 def dav(node, method, path, data=None, expect=None, headers=None):
-    url = f"{BASE_URL}/remote.php/dav/files/admin/{quote(path)}"
+    url = f"{BASE_URL}/remote.php/dav/files/admin/{quote(path.lstrip('/'))}"
     status, response_headers, body = http(node, method, url, data, headers)
     if expect is not None:
         assert status == expect, f"WebDAV {method} {path}: expected {expect}, got {status}: {body}"
@@ -628,6 +628,92 @@ def test_integrations(node, label):
     api(node, "DELETE", f"notes/{note['id']}")
 
 
+def test_client_contracts(node, label):
+    """Replay request shapes transcribed from Android and Desktop, with real versions and trash."""
+    def expand(value, variables):
+        if isinstance(value, str):
+            return value.format_map(variables)
+        if isinstance(value, dict):
+            return {key: expand(item, variables) for key, item in value.items()}
+        if isinstance(value, list):
+            return [expand(item, variables) for item in value]
+        return value
+
+    def request(name, expect=200, **variables):
+        template = expand(CLIENT_REQUESTS[name], variables)
+        path = template["path"]
+        if "query" in template:
+            path += "?" + urlencode(template["query"], doseq=True)
+        return api(node, template["method"], path, template.get("payload"), template.get("headers"), expect)[0]
+
+    def assert_note(note, title, category, content, modified, favorite):
+        assert type(note["id"]) is int and note["id"] > 0, note
+        assert isinstance(note["etag"], str) and note["etag"], note
+        assert note["readonly"] is False, note
+        assert note["title"] == title and note["category"] == category, note
+        assert note["content"] == content, note
+        assert type(note["modified"]) is int and note["modified"] == modified, note
+        assert note["favorite"] is favorite, note
+        assert note["internalPath"] == f"/Contracts/Notes/{category}/{title}.qnote", note
+
+    previous = request("settings")
+    try:
+        settings = request("updateSettings")
+        assert settings["notesPath"] == "Contracts/Notes" and settings["fileSuffix"] == ".qnote"
+        for client in ["android", "desktop"]:
+            print(f"Nextcloud {label}: {client} request contracts")
+            info = request(f"{client}AppInfo")
+            assert info["notes_path_exists"] is True and info["versions_app"] is True and info["trash_app"] is True, info
+            assert info["versioning"] is True and isinstance(info["app_version"], str), info
+
+            note = request("createNote", client=client)
+            assert_note(note, f"Contract {client}", "Work/Project", "# Contract\n\nOriginal", 1700000000, False)
+            fetched = request("getNote", id=note["id"])
+            assert fetched == note, fetched
+
+            # A real WebDAV edit gives the versions app an old file revision to return.
+            node.succeed("sleep 1.1")
+            dav(node, "PUT", note["internalPath"], "# Contract\n\nRemote edit", expect=204)
+            remote = request("getNote", id=note["id"])
+            conflict = request("updateNote", expect=412, client=client, id=note["id"], etag=note["etag"])
+            assert conflict == remote, conflict
+            assert dav(node, "GET", note["internalPath"], expect=200)[2] == "# Contract\n\nRemote edit"
+
+            remote_path = remote["internalPath"]
+            versions = request("versions", remotePath=remote_path)
+            assert versions["file_name"] == remote_path and versions["error_messages"] == [], versions
+            assert any(version["data"] == "# Contract\n\nOriginal" for version in versions["versions"]), versions
+            for version in versions["versions"]:
+                assert type(version["timestamp"]) is int and version["timestamp"] > 0, version
+                assert isinstance(version["humanReadableTimestamp"], str) and version["humanReadableTimestamp"], version
+                assert isinstance(version["diffHtml"], str) and version["diffHtml"], version
+
+            updated = request("updateNote", client=client, id=note["id"], etag=remote["etag"])
+            assert updated["id"] == note["id"] and updated["etag"] != remote["etag"], updated
+            assert_note(updated, f"Renamed {client}", "Other", "# Contract\n\nUpdated", 1700000001, True)
+            excluded, _, _ = api(node, "GET", f"notes/{note['id']}?exclude=internalPath,content")
+            assert "internalPath" not in excluded and "content" not in excluded, excluded
+            request("deleteNote", id=note["id"])
+            request("getNote", expect=404, id=note["id"])
+            request("deleteNote", expect=404, id=note["id"])
+
+            directory = "/Contracts/Notes/Other"
+            if client == "desktop":
+                directory += "/"
+            trash = request("trash", directory=directory)
+            deleted = next(item for item in trash["notes"] if item["fileName"] == f"Renamed {client}.qnote")
+            assert deleted["noteName"] == f"Renamed {client}" and deleted["data"] == updated["content"], deleted
+            assert type(deleted["timestamp"]) is int and deleted["timestamp"] > 0, deleted
+            assert isinstance(deleted["dateString"], str) and deleted["dateString"], deleted
+            remote_path = updated["internalPath"]
+            restored = request("restore", remotePath=remote_path, timestamp=deleted["timestamp"])
+            assert restored["result"] is True and restored["filename"] == deleted["fileName"], restored
+            assert dav(node, "GET", updated["internalPath"], expect=200)[2] == updated["content"]
+            assert all(item["fileName"] != deleted["fileName"] for item in request("trash", directory=directory)["notes"])
+    finally:
+        api(node, "PUT", "settings", {"notesPath": previous["notesPath"], "fileSuffix": previous["fileSuffix"]})
+
+
 def test_version(node, label, pkg_version):
     print(f"Testing Nextcloud {label} ({pkg_version})")
     # Run one Nextcloud version at a time to keep memory usage low
@@ -648,5 +734,6 @@ def test_version(node, label, pkg_version):
     test_tags(node, label)
     test_note_history(node, label)
     test_integrations(node, label)
+    test_client_contracts(node, label)
 
     node.shutdown()

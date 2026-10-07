@@ -34,7 +34,8 @@ A note has the attributes of the Notes API:
   "title": "Meeting",
   "category": "Work/Projects",
   "favorite": false,
-  "content": "# Meeting\n\n…"
+  "content": "# Meeting\n\n…",
+  "internalPath": "/Notes/Work/Projects/Meeting.md"
 }
 ```
 
@@ -42,6 +43,7 @@ A note has the attributes of the Notes API:
 - `title` is the file name without the suffix, e.g. `Meeting` for `Meeting.md`.
 - `category` is the note subfolder path relative to the note folder, separated by `/`, and `""` for the note folder root.
 - `favorite` is the Nextcloud favorite of the file, shared with the Files and Notes apps.
+- `internalPath` is a read-only QOwnNotes extension: the actual file path inside the requesting user's files root, including the note folder, suffix and a leading `/` (not the server's filesystem path). Android requires this slash and passes the path to the legacy `note/versions` endpoint. It follows renames and moves and can be omitted with `exclude=internalPath`.
 - `etag` changes whenever one of the other attributes changes.
 
 ## Differences to Nextcloud Notes

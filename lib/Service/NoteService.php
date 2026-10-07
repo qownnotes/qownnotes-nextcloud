@@ -121,6 +121,16 @@ class NoteService {
 		return new Note($file, $note->getSubFolderPath(), $note->isFavorite());
 	}
 
+	/** Path inside the requesting user's files root, with the leading slash expected by Android */
+	public function getInternalPath(string $userId, Note $note): string {
+		$path = $this->folders->getUserFolder($userId)->getRelativePath($note->getFile()->getPath());
+		if ($path === null) {
+			throw new NoteNotFoundException();
+		}
+
+		return '/' . ltrim($path, '/');
+	}
+
 	public function setModified(Note $note, int $modified): Note {
 		$this->ensureWritable($note);
 		$note->getFile()->touch($modified);
