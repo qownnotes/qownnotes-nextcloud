@@ -214,7 +214,16 @@ class TagDatabase {
 			if ($file === null) {
 				$notesFolder->newFile(NoteFolderService::TAG_DATABASE_FILE_NAME, $handle);
 			} else {
+				$previousEtag = $file->getEtag();
+				$previousMtime = $file->getMTime();
 				$file->putContent($handle);
+
+				// Storages like the local one derive the ETag from the modification time and size, so two changes
+				// within the same second could keep the ETag, and other clients and the cache would miss the change
+				$stored = $this->getFile($notesFolder);
+				if ($stored !== null && $stored->getEtag() === $previousEtag) {
+					$stored->touch(max(time(), $previousMtime) + 1);
+				}
 			}
 		} catch (NotPermittedException $e) {
 			throw new NotWritableException('notes.sqlite can not be written', $e);

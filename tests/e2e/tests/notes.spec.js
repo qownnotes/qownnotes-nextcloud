@@ -4,7 +4,7 @@
  */
 
 import { expect, test } from '@playwright/test'
-import { apiClient, APP_PATH, login, navigationEntry, noteListItem, noteTagPaths, uniqueName } from './helpers.js'
+import { apiClient, APP_PATH, deleteTags, login, navigationEntry, noteListItem, noteTagPaths, uniqueName } from './helpers.js'
 
 let api
 
@@ -65,6 +65,7 @@ test('moving a note to another folder keeps its tags', async ({ page }) => {
 	expect((await api.get(`notes/${note.id}`)).content).toContain('](../../media/e2e.png)')
 
 	await api.delete(`subfolders?path=${encodeURIComponent(folder)}`)
+	await deleteTags(api, [tag])
 })
 
 test('the tag filter shows only tagged notes', async ({ page }) => {
@@ -86,6 +87,7 @@ test('the tag filter shows only tagged notes', async ({ page }) => {
 
 	await api.delete(`notes/${tagged.id}`)
 	await api.delete(`notes/${untagged.id}`)
+	await deleteTags(api, [tag])
 })
 
 test('tags can be added to a note in the editor', async ({ page }) => {
@@ -101,6 +103,7 @@ test('tags can be added to a note in the editor', async ({ page }) => {
 	await expect(noteListItem(page, note.title).locator('.note-list__tag')).toHaveText('Child')
 
 	await api.delete(`notes/${note.id}`)
+	await deleteTags(api, [tag])
 })
 
 test('a conflict with changes of another client is resolved', async ({ page }) => {

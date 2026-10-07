@@ -12,10 +12,12 @@
 		:open="open"
 		:editable="writable"
 		:editLabel="t('qownnotes', 'Rename tag')"
+		:draggable="writable"
 		:data-tag-id="tag.id"
 		@update:open="open = $event"
 		@update:name="rename"
 		@click="$emit('toggle', tag.id)"
+		@dragstart="onDragStart"
 		@dragover="onDragOver"
 		@dragleave="dropTarget = false"
 		@drop="onDrop">
@@ -34,6 +36,18 @@
 					<Plus :size="20" />
 				</template>
 			</NcActionInput>
+			<NcActionButton closeAfterClick @click="$emit('editColor', tag)">
+				<template #icon>
+					<Palette :size="20" />
+				</template>
+				{{ t('qownnotes', 'Change color') }}
+			</NcActionButton>
+			<NcActionButton v-if="tag.parentId !== 0" closeAfterClick @click="moveTo(0)">
+				<template #icon>
+					<ArrowUpLeft :size="20" />
+				</template>
+				{{ t('qownnotes', 'Move to the top level') }}
+			</NcActionButton>
 			<NcActionButton closeAfterClick @click="$emit('delete', tag)">
 				<template #icon>
 					<Delete :size="20" />
@@ -51,7 +65,9 @@
 			:dark="dark"
 			@toggle="$emit('toggle', $event)"
 			@operations="$emit('operations', $event)"
-			@linkNote="(...args) => $emit('linkNote', ...args)"
+			@linkNotes="(...args) => $emit('linkNotes', ...args)"
+			@editColor="$emit('editColor', $event)"
+			@moveTag="(...args) => $emit('moveTag', ...args)"
 			@delete="$emit('delete', $event)" />
 	</NcAppNavigationItem>
 </template>
@@ -62,21 +78,25 @@ import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionInput from '@nextcloud/vue/components/NcActionInput'
 import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcCounterBubble from '@nextcloud/vue/components/NcCounterBubble'
+import ArrowUpLeft from 'vue-material-design-icons/ArrowUpLeft.vue'
 import Delete from 'vue-material-design-icons/Delete.vue'
+import Palette from 'vue-material-design-icons/Palette.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
 import TagIcon from 'vue-material-design-icons/Tag.vue'
-import { DRAG_TYPE_NOTE } from '../utils/dragAndDrop.js'
+import { decodeNoteIds, DRAG_TYPE_NOTE, DRAG_TYPE_TAG } from '../utils/dragAndDrop.js'
 import { tagColor } from '../utils/tags.js'
 
 export default {
 	name: 'TagTreeItem',
 
 	components: {
+		ArrowUpLeft,
 		Delete,
 		NcActionButton,
 		NcActionInput,
 		NcAppNavigationItem,
 		NcCounterBubble,
+		Palette,
 		Plus,
 		TagIcon,
 	},
@@ -104,7 +124,7 @@ export default {
 		},
 	},
 
-	emits: ['toggle', 'operations', 'linkNote', 'delete'],
+	emits: ['toggle', 'operations', 'linkNotes', 'editColor', 'moveTag', 'delete'],
 
 	data() {
 		return {
@@ -143,22 +163,41 @@ export default {
 			this.newTagName = ''
 		},
 
+		moveTo(parentId) {
+			this.$emit('moveTag', this.tag.id, parentId)
+		},
+
+		onDragStart(event) {
+			event.stopPropagation()
+			event.dataTransfer.setData(DRAG_TYPE_TAG, String(this.tag.id))
+			event.dataTransfer.effectAllowed = 'move'
+		},
+
 		onDragOver(event) {
-			if (this.writable && event.dataTransfer.types.includes(DRAG_TYPE_NOTE)) {
+			const types = event.dataTransfer.types
+			if (this.writable && (types.includes(DRAG_TYPE_NOTE) || types.includes(DRAG_TYPE_TAG))) {
 				event.preventDefault()
 				event.stopPropagation()
-				event.dataTransfer.dropEffect = 'link'
+				event.dataTransfer.dropEffect = types.includes(DRAG_TYPE_TAG) ? 'move' : 'link'
 				this.dropTarget = true
 			}
 		},
 
 		onDrop(event) {
 			this.dropTarget = false
-			const noteId = event.dataTransfer.getData(DRAG_TYPE_NOTE)
-			if (noteId !== '') {
-				event.preventDefault()
-				event.stopPropagation()
-				this.$emit('linkNote', Number(noteId), this.tag.id)
+			const noteIds = decodeNoteIds(event.dataTransfer.getData(DRAG_TYPE_NOTE))
+			const tagId = Number(event.dataTransfer.getData(DRAG_TYPE_TAG))
+			if (noteIds.length === 0 && !tagId) {
+				return
+			}
+			event.preventDefault()
+			event.stopPropagation()
+
+			if (noteIds.length > 0) {
+				this.$emit('linkNotes', noteIds, this.tag.id)
+			} else {
+				// The dropped tag becomes a child tag of this tag
+				this.$emit('moveTag', tagId, this.tag.id)
 			}
 		},
 	},

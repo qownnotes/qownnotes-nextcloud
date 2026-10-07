@@ -21,3 +21,12 @@
     autosave and conflict handling, preview with checkable tasks, favorites and media uploads
   - Notes renamed or moved by the web interface keep their tags, and relative links to media files and
     attachments are adapted to the new subfolder depth (opt-in for API clients with `X-QOwnNotes-Relink-Tags`)
+  - Tag management in the web interface: colors for light and dark themes, moving tags by drag and drop,
+    and tagging, untagging, favoring or deleting several selected notes at once (Ctrl/Shift+click)
+  - Note sidebar with file details and previous versions (with differences and restore), deleted notes
+    can be restored with their tags, and the conflict dialog shows the differences
+  - QOwnNotes API 1.1: `note/{id}/info`, `note/{id}/versions`, `trash` and `trash/restore`
+  - Integrations: "Recent notes" dashboard widget, unified search for notes (including tags, `#tag`),
+    link previews and smart picker for notes, and "Open in QOwnNotes" in the Files app; all of them are
+    hidden in API-only mode
+  - Changes of `notes.sqlite` within the same second always get a new ETag, so other clients notice them

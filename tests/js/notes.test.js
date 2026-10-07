@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { baseName, folderPaths, isInFolder, joinPath, matchesSearch, mergeNotes, parentPath, sortNotes } from '../../src/utils/notes.js'
+import { baseName, folderPaths, isInFolder, joinPath, matchesSearch, mergeNotes, parentPath, rangeSelection, sortNotes } from '../../src/utils/notes.js'
 
 describe('notes', () => {
 	it('filters notes by subfolder', () => {
@@ -60,5 +60,15 @@ describe('notes', () => {
 		expect(parentPath('A/B')).toBe('A')
 		expect(parentPath('A')).toBe('')
 		expect(baseName('A/B')).toBe('B')
+	})
+})
+
+describe('rangeSelection', () => {
+	it('selects the notes between anchor and target', () => {
+		expect(rangeSelection([1, 2, 3, 4], 2, 4)).toEqual([2, 3, 4])
+		expect(rangeSelection([1, 2, 3, 4], 4, 2)).toEqual([2, 3, 4])
+		expect(rangeSelection([1, 2, 3, 4], null, 3)).toEqual([3])
+		expect(rangeSelection([1, 2, 3, 4], 9, 3)).toEqual([3])
+		expect(rangeSelection([1, 2, 3, 4], 1, 9)).toEqual([])
 	})
 })

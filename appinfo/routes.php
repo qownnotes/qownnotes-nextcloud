@@ -53,4 +53,10 @@ return ['routes' => [
 	['name' => 'tags_api#links', 'url' => '/api/v1/tag-links', 'verb' => 'GET'],
 	['name' => 'tags_api#get_note_tags', 'url' => '/api/v1/note/{id}/tags', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 	['name' => 'tags_api#set_note_tags', 'url' => '/api/v1/note/{id}/tags', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+
+	// QOwnNotes API 1.1: note details, versions and trash by note ID
+	['name' => 'note_history_api#info', 'url' => '/api/v1/note/{id}/info', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
+	['name' => 'note_history_api#versions', 'url' => '/api/v1/note/{id}/versions', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
+	['name' => 'note_history_api#trash', 'url' => '/api/v1/trash', 'verb' => 'GET'],
+	['name' => 'note_history_api#restore', 'url' => '/api/v1/trash/restore', 'verb' => 'POST'],
 ]];

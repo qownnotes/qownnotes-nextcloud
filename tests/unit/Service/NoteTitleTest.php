@@ -55,4 +55,21 @@ class NoteTitleTest extends TestCase {
 		$this->assertSame("Title\n=====\n\n", NoteTitle::createHeader('Title', 'setext'));
 		$this->assertSame(40, strlen(explode("\n", NoteTitle::createHeader(str_repeat('x', 50), 'setext'))[1]));
 	}
+
+	public static function excerpts(): array {
+		return [
+			["# Title\n\nFirst line\nsecond", 'First line second'],
+			["Title\n=====\n\n## Sub\n- [ ] task\n> quote", 'Sub task quote'],
+			["# Title\n\n```\ncode\n```\n---\n1. item", 'code item'],
+			['# Only title', ''],
+			["# T\n**bold** `c` [link](x.md) ![i](media/i.png)", 'bold c link'],
+			['', ''],
+			["# T\n\n" . str_repeat('word ', 30), rtrim(substr(str_repeat('word ', 30), 0, 19)) . '…'],
+		];
+	}
+
+	#[DataProvider('excerpts')]
+	public function testExcerpt(string $content, string $expected): void {
+		$this->assertSame($expected, NoteTitle::excerpt($content, 20));
+	}
 }

@@ -43,6 +43,37 @@ class NoteTitle {
 	}
 
 	/**
+	 * A short plain text excerpt of the note text without its headline, e.g. for search results and the dashboard
+	 */
+	public static function excerpt(string $content, int $maxLength = 100): string {
+		$lines = preg_split('/\R/u', $content) ?: [];
+		// The first line is the headline, an underline (setext headline) belongs to it
+		array_shift($lines);
+		if (isset($lines[0]) && preg_match('/^\s*(=+|-+)\s*$/u', $lines[0]) === 1) {
+			array_shift($lines);
+		}
+
+		$text = '';
+		foreach ($lines as $line) {
+			$line = trim((string)preg_replace('/^\s*(#+\s+|[-*+]\s+(\[[ xX]\]\s+)?|>\s*|\d+[.)]\s+)/u', '', $line));
+			if ($line === '' || preg_match('/^(`{3,}|~{3,}|[-*_=\s]{3,})$/u', $line) === 1) {
+				continue;
+			}
+			$text .= ($text === '' ? '' : ' ') . $line;
+			if (mb_strlen($text, 'UTF-8') > $maxLength) {
+				break;
+			}
+		}
+
+		// Images are left out, links keep their text, emphasis and code markers are removed
+		$text = (string)preg_replace('/!\[[^\]]*\]\([^)]*\)/u', '', $text);
+		$text = (string)preg_replace('/\[([^\]]*)\]\([^)]*\)/u', '$1', $text);
+		$text = (string)preg_replace('/(\*\*|__|~~|`)/u', '', $text);
+		$text = trim((string)preg_replace('/\s+/u', ' ', $text));
+		return mb_strlen($text, 'UTF-8') > $maxLength ? rtrim(mb_substr($text, 0, $maxLength - 1, 'UTF-8')) . '…' : $text;
+	}
+
+	/**
 	 * Creates the headline of a new note, like Note::createNoteHeader in QOwnNotes Desktop
 	 */
 	public static function createHeader(string $title, string $style = SettingsService::HEADER_STYLE_ATX): string {

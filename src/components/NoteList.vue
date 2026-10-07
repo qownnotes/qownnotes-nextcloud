@@ -41,6 +41,7 @@
 					</NcActionCheckbox>
 				</NcActions>
 			</div>
+			<BulkActions v-if="notesStore.selection.length > 0" @deleted="$emit('notesDeleted', $event)" />
 		</div>
 
 		<NcLoadingIcon v-if="loading" :size="32" class="note-list__loading" />
@@ -59,8 +60,9 @@
 				:active="note.id === selectedNoteId"
 				:data-note-id="note.id"
 				class="note-list__item"
+				:class="{ 'note-list__item--selected': notesStore.selection.includes(note.id) }"
 				href="#"
-				@click.prevent="$emit('select', note.id)"
+				@click.prevent="onClick($event, note)"
 				@dragstart="onDragStart($event, note)">
 				<template #icon>
 					<Star v-if="note.favorite" :size="20" class="note-list__favorite" />
@@ -105,9 +107,11 @@ import Magnify from 'vue-material-design-icons/Magnify.vue'
 import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
 import Star from 'vue-material-design-icons/Star.vue'
+import BulkActions from './BulkActions.vue'
+import { useNotesStore } from '../stores/notes.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
-import { DRAG_TYPE_NOTE } from '../utils/dragAndDrop.js'
+import { DRAG_TYPE_NOTE, encodeNoteIds } from '../utils/dragAndDrop.js'
 import { tagColor } from '../utils/tags.js'
 
 // Rendering thousands of list items at once is slow, so the list grows on request
@@ -117,6 +121,7 @@ export default {
 	name: 'NoteList',
 
 	components: {
+		BulkActions,
 		Magnify,
 		NcActionButton,
 		NcActionCheckbox,
@@ -160,7 +165,7 @@ export default {
 		},
 	},
 
-	emits: ['select', 'newNote', 'update:search'],
+	emits: ['select', 'newNote', 'update:search', 'notesDeleted'],
 
 	data() {
 		return {
@@ -170,7 +175,7 @@ export default {
 	},
 
 	computed: {
-		...mapStores(useSettingsStore, useTagsStore),
+		...mapStores(useNotesStore, useSettingsStore, useTagsStore),
 
 		visibleNotes() {
 			return this.notes.slice(0, this.limit)
@@ -196,8 +201,21 @@ export default {
 			return color ? { borderColor: color } : {}
 		},
 
+		onClick(event, note) {
+			if (event?.ctrlKey || event?.metaKey) {
+				this.notesStore.toggleSelection(note.id, this.selectedNoteId)
+			} else if (event?.shiftKey) {
+				this.notesStore.selectRange(this.notes.map((other) => other.id), note.id, this.selectedNoteId)
+			} else {
+				this.notesStore.clearSelection()
+				this.$emit('select', note.id)
+			}
+		},
+
 		onDragStart(event, note) {
-			event.dataTransfer.setData(DRAG_TYPE_NOTE, String(note.id))
+			// Dragging a selected note drags all selected notes
+			const selection = this.notesStore.selection
+			event.dataTransfer.setData(DRAG_TYPE_NOTE, encodeNoteIds(selection.includes(note.id) ? selection : [note.id]))
 			event.dataTransfer.setData('text/plain', note.title)
 			event.dataTransfer.effectAllowed = 'all'
 		},
@@ -230,6 +248,10 @@ export default {
 
 .note-list__loading {
 	margin-top: 32px;
+}
+
+.note-list__item--selected :deep(.list-item) {
+	background-color: var(--color-primary-element-light);
 }
 
 .note-list__favorite {

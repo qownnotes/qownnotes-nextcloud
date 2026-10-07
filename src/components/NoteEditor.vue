@@ -40,6 +40,17 @@
 						<EyeOutline :size="20" />
 					</template>
 				</NcButton>
+				<NcButton
+					variant="tertiary"
+					:pressed="detailsOpen"
+					:aria-label="t('qownnotes', 'Details and versions')"
+					:title="t('qownnotes', 'Details and versions')"
+					class="note-editor__details-toggle"
+					@click="$emit('toggleDetails')">
+					<template #icon>
+						<InformationOutline :size="20" />
+					</template>
+				</NcButton>
 				<NcActions>
 					<NcActionInput
 						v-if="!note.readonly"
@@ -96,8 +107,11 @@
 			noClose
 			:buttons="conflictButtons">
 			<p>{{ t('qownnotes', 'The note was changed by another app or device while you were editing it. Which version do you want to keep?') }}</p>
-			<h3>{{ t('qownnotes', 'Other version') }}</h3>
-			<pre class="note-editor__conflict-text">{{ conflict.content }}</pre>
+			<p class="note-editor__conflict-legend">
+				<del>{{ t('qownnotes', 'Only in your version') }}</del>
+				<ins>{{ t('qownnotes', 'Only in the other version') }}</ins>
+			</p>
+			<DiffView :from="content" :to="conflict.content ?? ''" />
 		</NcDialog>
 
 		<NcDialog
@@ -122,9 +136,11 @@ import Delete from 'vue-material-design-icons/Delete.vue'
 import EyeOutline from 'vue-material-design-icons/EyeOutline.vue'
 import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
 import ImagePlus from 'vue-material-design-icons/ImagePlus.vue'
+import InformationOutline from 'vue-material-design-icons/InformationOutline.vue'
 import PencilOutline from 'vue-material-design-icons/PencilOutline.vue'
 import Star from 'vue-material-design-icons/Star.vue'
 import StarOutline from 'vue-material-design-icons/StarOutline.vue'
+import DiffView from './DiffView.vue'
 import MarkdownEditor from './MarkdownEditor.vue'
 import NotePreview from './NotePreview.vue'
 import NoteTagEditor from './NoteTagEditor.vue'
@@ -143,9 +159,11 @@ export default {
 
 	components: {
 		Delete,
+		DiffView,
 		EyeOutline,
 		FolderOutline,
 		ImagePlus,
+		InformationOutline,
 		MarkdownEditor,
 		NcActionButton,
 		NcActionInput,
@@ -164,9 +182,14 @@ export default {
 			type: Number,
 			required: true,
 		},
+
+		detailsOpen: {
+			type: Boolean,
+			default: false,
+		},
 	},
 
-	emits: ['deleted'],
+	emits: ['deleted', 'toggleDetails'],
 
 	data() {
 		const note = useNotesStore().get(this.noteId)
@@ -344,6 +367,19 @@ export default {
 			}
 		},
 
+		/**
+		 * Replaces the text, e.g. with a previous version, and saves it like an edit of the user
+		 *
+		 * @param {string} content the new text
+		 */
+		replaceContent(content) {
+			if (this.note.readonly) {
+				return
+			}
+			this.content = content
+			this.save()
+		},
+
 		takeTheirs() {
 			const content = this.conflict.content ?? ''
 			this.conflict = null
@@ -491,12 +527,18 @@ export default {
 	overflow: auto;
 }
 
-.note-editor__conflict-text {
-	max-height: 40vh;
-	padding: 8px;
-	overflow: auto;
-	white-space: pre-wrap;
-	background-color: var(--color-background-dark);
-	border-radius: var(--border-radius);
+.note-editor__conflict-legend {
+	display: flex;
+	gap: 16px;
+	margin: 8px 0;
+}
+
+.note-editor__conflict-legend ins {
+	text-decoration: none;
+	background-color: var(--color-success-hover, rgba(70, 186, 97, 0.3));
+}
+
+.note-editor__conflict-legend del {
+	background-color: var(--color-error-hover, rgba(229, 50, 64, 0.3));
 }
 </style>

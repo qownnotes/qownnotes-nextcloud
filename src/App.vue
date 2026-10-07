@@ -11,7 +11,8 @@
 			@selectFolder="selectFolder"
 			@showFavorites="showFavorites"
 			@newNote="createNote"
-			@openSettings="settingsOpen = true" />
+			@openSettings="settingsOpen = true"
+			@openTrash="trashOpen = true" />
 
 		<NcAppContent
 			:pageHeading="t('qownnotes', 'Notes')"
@@ -25,13 +26,17 @@
 					:loading="!notesStore.loaded"
 					:heading="listHeading"
 					@select="selectNote"
-					@newNote="createNote" />
+					@newNote="createNote"
+					@notesDeleted="onNotesDeleted" />
 			</template>
 
 			<NoteEditor
 				v-if="selectedNote"
 				:key="selectedNote.id"
+				ref="editor"
 				:noteId="selectedNote.id"
+				:detailsOpen="detailsOpen"
+				@toggleDetails="detailsOpen = !detailsOpen"
 				@deleted="onNoteDeleted" />
 			<NcEmptyContent
 				v-else-if="loadError"
@@ -56,7 +61,15 @@
 			</NcEmptyContent>
 		</NcAppContent>
 
+		<NoteSidebar
+			v-if="selectedNote && detailsOpen"
+			:key="'sidebar-' + selectedNote.id"
+			:note="selectedNote"
+			@restoreVersion="restoreVersion"
+			@close="detailsOpen = false" />
+
 		<SettingsDialog v-model:open="settingsOpen" @changed="reloadAll" />
+		<TrashDialog v-if="trashOpen" @restored="onNoteRestored" @close="trashOpen = false" />
 	</NcContent>
 </template>
 
@@ -72,7 +85,9 @@ import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
 import AppNavigation from './components/AppNavigation.vue'
 import NoteEditor from './components/NoteEditor.vue'
 import NoteList from './components/NoteList.vue'
+import NoteSidebar from './components/NoteSidebar.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
+import TrashDialog from './components/TrashDialog.vue'
 import { errorMessage } from './api.js'
 import logger from './logger.js'
 import { folderRoute, noteRoute, routeFolder, routeNoteId } from './router.js'
@@ -97,8 +112,10 @@ export default {
 		NcEmptyContent,
 		NoteEditor,
 		NoteList,
+		NoteSidebar,
 		NoteTextOutline,
 		SettingsDialog,
+		TrashDialog,
 	},
 
 	data() {
@@ -106,6 +123,8 @@ export default {
 			search: '',
 			favoritesOnly: false,
 			settingsOpen: false,
+			trashOpen: false,
+			detailsOpen: false,
 			loadError: '',
 			refreshTimer: null,
 		}
@@ -233,6 +252,25 @@ export default {
 
 		onNoteDeleted() {
 			this.$router.push(folderRoute(this.selectedFolder))
+		},
+
+		onNotesDeleted(noteIds) {
+			if (noteIds.includes(this.selectedNoteId)) {
+				this.onNoteDeleted()
+			}
+		},
+
+		async onNoteRestored(noteId) {
+			await Promise.all([this.notesStore.load(), this.foldersStore.load(), this.tagsStore.load()])
+			if (noteId !== null && this.notesStore.get(noteId)) {
+				this.trashOpen = false
+				this.favoritesOnly = false
+				this.$router.push(noteRoute(noteId, null))
+			}
+		},
+
+		restoreVersion(content) {
+			this.$refs.editor?.replaceContent(content)
 		},
 
 		/**

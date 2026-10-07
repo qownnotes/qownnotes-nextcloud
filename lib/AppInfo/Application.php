@@ -10,16 +10,23 @@ declare(strict_types=1);
 namespace OCA\QOwnNotes\AppInfo;
 
 use OCA\QOwnNotes\Capabilities;
+use OCA\QOwnNotes\Dashboard\RecentNotesWidget;
+use OCA\QOwnNotes\Listener\FilesScriptsListener;
 use OCA\QOwnNotes\Listener\UserDeletedListener;
 use OCA\QOwnNotes\Middleware\UiEnabledMiddleware;
+use OCA\QOwnNotes\Reference\NoteReferenceProvider;
+use OCA\QOwnNotes\Search\NotesSearchProvider;
 use OCA\QOwnNotes\Service\AppSettings;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
+use OCP\IAppConfig;
 use OCP\INavigationManager;
 use OCP\IURLGenerator;
 use OCP\L10N\IFactory;
+use OCP\Server;
 use OCP\User\Events\UserDeletedEvent;
 
 class Application extends App implements IBootstrap {
@@ -42,6 +49,15 @@ class Application extends App implements IBootstrap {
 		$context->registerCapability(Capabilities::class);
 		$context->registerMiddleware(UiEnabledMiddleware::class);
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
+
+		// Integrations of the web interface; the dashboard widget and the search provider hide themselves in API-only mode
+		$context->registerDashboardWidget(RecentNotesWidget::class);
+		$context->registerSearchProvider(NotesSearchProvider::class);
+		$context->registerEventListener(BeforeTemplateRenderedEvent::class, FilesScriptsListener::class);
+		// Reference providers can't hide themselves in the smart picker, so they are only registered with the web interface
+		if ((new AppSettings(Server::get(IAppConfig::class)))->isUiEnabled()) {
+			$context->registerReferenceProvider(NoteReferenceProvider::class);
+		}
 	}
 
 	public function boot(IBootContext $context): void {

@@ -6,10 +6,12 @@
 import { createAppConfig } from '@nextcloud/vite-config'
 import { join } from 'node:path'
 
-// Builds js/qownnotes-main.mjs; the styles are bundled into the script
+// Builds js/qownnotes-main.mjs (web interface) and js/qownnotes-files.mjs (Files app action); the styles are
+// bundled into the scripts
 export default createAppConfig(
 	{
 		main: join(import.meta.dirname, 'src', 'main.js'),
+		files: join(import.meta.dirname, 'src', 'files.js'),
 	},
 	{
 		inlineCSS: true,

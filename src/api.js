@@ -179,3 +179,43 @@ export function errorStatus(error) {
 export function errorMessage(error) {
 	return error?.response?.data?.message || error?.message || ''
 }
+
+/**
+ * File details of a note: file name, path in the user's files, size and whether versions and trash are available
+ *
+ * @param {number} noteId the note ID
+ */
+export async function fetchNoteInfo(noteId) {
+	return (await axios.get(`${API_BASE}/note/${noteId}/info`)).data
+}
+
+/**
+ * The previous versions of a note, newest first, with an HTML diff to the current text
+ *
+ * @param {number} noteId the note ID
+ * @return {Promise<Array<{timestamp: number, humanReadableTimestamp: string, diffHtml: string, data: string}>>}
+ */
+export async function fetchNoteVersions(noteId) {
+	return (await axios.get(`${API_BASE}/note/${noteId}/versions`)).data.versions
+}
+
+/**
+ * Notes deleted from the note folder, newest first
+ *
+ * @return {Promise<Array<{title: string, fileName: string, subFolderPath: string, originalLocation: string, deleted: number, content: string}>>}
+ */
+export async function fetchTrash() {
+	return (await axios.get(`${API_BASE}/trash`)).data.notes
+}
+
+/**
+ * Restores a deleted note; its tag links are not stale anymore
+ *
+ * @param {object} note the trashed note
+ * @param {string} note.originalLocation the original path in the user's files
+ * @param {number} note.deleted the deletion time
+ * @return {Promise<number|null>} the ID of the restored note, if it could be found
+ */
+export async function restoreTrashedNote({ originalLocation, deleted }) {
+	return (await axios.post(`${API_BASE}/trash/restore`, { originalLocation, deleted }, { headers: RELINK_HEADERS })).data.id
+}

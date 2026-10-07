@@ -62,7 +62,7 @@
 			@newNote="$emit('newNote', $event)"
 			@create="$emit('create', $event)"
 			@moveFolder="(...args) => $emit('moveFolder', ...args)"
-			@moveNote="(...args) => $emit('moveNote', ...args)"
+			@moveNotes="(...args) => $emit('moveNotes', ...args)"
 			@delete="$emit('delete', $event)" />
 	</NcAppNavigationItem>
 </template>
@@ -78,7 +78,7 @@ import Folder from 'vue-material-design-icons/Folder.vue'
 import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
 import FolderPlus from 'vue-material-design-icons/FolderPlus.vue'
 import NotePlus from 'vue-material-design-icons/NotePlus.vue'
-import { DRAG_TYPE_FOLDER, DRAG_TYPE_NOTE } from '../utils/dragAndDrop.js'
+import { decodeNoteIds, DRAG_TYPE_FOLDER, DRAG_TYPE_NOTE } from '../utils/dragAndDrop.js'
 import { joinPath, parentPath } from '../utils/notes.js'
 
 export default {
@@ -115,7 +115,7 @@ export default {
 		},
 	},
 
-	emits: ['select', 'newNote', 'create', 'moveFolder', 'moveNote', 'delete'],
+	emits: ['select', 'newNote', 'create', 'moveFolder', 'moveNotes', 'delete'],
 
 	data() {
 		return {
@@ -184,16 +184,16 @@ export default {
 
 		onDrop(event) {
 			this.dropTarget = false
-			const noteId = event.dataTransfer.getData(DRAG_TYPE_NOTE)
+			const noteIds = decodeNoteIds(event.dataTransfer.getData(DRAG_TYPE_NOTE))
 			const folderPath = event.dataTransfer.getData(DRAG_TYPE_FOLDER)
-			if (noteId === '' && folderPath === '') {
+			if (noteIds.length === 0 && folderPath === '') {
 				return
 			}
 			event.preventDefault()
 			event.stopPropagation()
 
-			if (noteId !== '') {
-				this.$emit('moveNote', Number(noteId), this.folder.path)
+			if (noteIds.length > 0) {
+				this.$emit('moveNotes', noteIds, this.folder.path)
 			} else if (folderPath !== this.folder.path && parentPath(folderPath) !== this.folder.path
 				&& !(this.folder.path + '/').startsWith(folderPath + '/')) {
 				this.$emit('moveFolder', folderPath, joinPath(this.folder.path, folderPath.slice(folderPath.lastIndexOf('/') + 1)))

@@ -162,23 +162,25 @@ Rules:
 
 All APIs live under `/index.php/apps/qownnotes/`.
 
-| Surface       | Route                                                                  | Notes                                                                |
-| ------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Web UI        | `GET /`, `GET /note/{id}`, `GET /folder/{path}`                        | Disabled in API-only mode                                            |
-| Web internal  | `/web/...`                                                             | Session + CSRF protected. Disabled in API-only mode                  |
-| Notes API     | `GET/POST /api/v1/notes`                                               | Same semantics as Nextcloud Notes API v1                             |
-|               | `GET/PUT/DELETE /api/v1/notes/{id}`                                    | `If-Match` → 412 on conflict                                         |
-|               | `GET/PUT /api/v1/settings`                                             | `notesPath`, `fileSuffix` (custom suffix as of 1.3)                  |
-|               | `GET/POST/DELETE /api/v1/attachment/{noteid}`                          | Also routed as `/api/v1.4/attachment/{noteid}` for parity with Notes |
-|               | `OPTIONS /api/v1/{path}`                                               | CORS preflight                                                       |
-| QOwnNotes API | `GET /api/v1/note/app_info`                                            | Byte-compatible with qownnotesapi                                    |
-|               | `GET /api/v1/note/versions`                                            | Byte-compatible with qownnotesapi                                    |
-|               | `GET /api/v1/note/trashed`                                             | Byte-compatible with qownnotesapi                                    |
-|               | `GET /api/v1/note/restore_trashed`                                     | Kept as GET for compatibility. Add `POST` variant for new clients    |
-|               | `GET/POST /api/v1/subfolders`, `PATCH/DELETE /api/v1/subfolders?path=` | Subfolder tree and operations (4.8)                                  |
-|               | `GET/POST /api/v1/tags`, `PATCH/DELETE /api/v1/tags/{id}`              | Tag tree and management (4.9)                                        |
-|               | `GET/PUT /api/v1/note/{id}/tags`                                       | Tags of one note (`id` = Notes API note ID)                          |
-|               | `GET /api/v1/tag-links`                                                | All links for a full client sync. Supports `If-None-Match`           |
+| Surface       | Route                                                                  | Notes                                                                 |
+| ------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Web UI        | `GET /`, `GET /note/{id}`, `GET /folder/{path}`                        | Disabled in API-only mode                                             |
+| Web internal  | none: the web UI uses the APIs below with the session and CSRF token   | No duplicated endpoints. The page itself is disabled in API-only mode |
+| Notes API     | `GET/POST /api/v1/notes`                                               | Same semantics as Nextcloud Notes API v1                              |
+|               | `GET/PUT/DELETE /api/v1/notes/{id}`                                    | `If-Match` → 412 on conflict                                          |
+|               | `GET/PUT /api/v1/settings`                                             | `notesPath`, `fileSuffix` (custom suffix as of 1.3)                   |
+|               | `GET/POST/DELETE /api/v1/attachment/{noteid}`                          | Also routed as `/api/v1.4/attachment/{noteid}` for parity with Notes  |
+|               | `OPTIONS /api/v1/{path}`                                               | CORS preflight                                                        |
+| QOwnNotes API | `GET /api/v1/note/app_info`                                            | Byte-compatible with qownnotesapi                                     |
+|               | `GET /api/v1/note/versions`                                            | Byte-compatible with qownnotesapi                                     |
+|               | `GET /api/v1/note/trashed`                                             | Byte-compatible with qownnotesapi                                     |
+|               | `GET /api/v1/note/restore_trashed`                                     | Kept as GET for compatibility. Add `POST` variant for new clients     |
+|               | `GET/POST /api/v1/subfolders`, `PATCH/DELETE /api/v1/subfolders?path=` | Subfolder tree and operations (4.8)                                   |
+|               | `GET/POST /api/v1/tags`, `PATCH/DELETE /api/v1/tags/{id}`              | Tag tree and management (4.9)                                         |
+|               | `GET/PUT /api/v1/note/{id}/tags`                                       | Tags of one note (`id` = Notes API note ID)                           |
+|               | `GET /api/v1/tag-links`                                                | All links for a full client sync. Supports `If-None-Match`            |
+|               | `GET /api/v1/note/{id}/info`, `GET /api/v1/note/{id}/versions`         | File details and versions by note ID (web UI sidebar)                 |
+|               | `GET /api/v1/trash`, `POST /api/v1/trash/restore`                      | Deleted notes of the note folder. Restore un-stales tag links         |
 
 `note/*`, `subfolders`, `tags`, `tag-links` (QOwnNotes) and `notes/*` (Notes) do not collide, so everything can share the `/api/v1/` prefix and clients only need one base URL. Do **not** add a catch-all `/api/{path}` route (Notes has one), because it would shadow these routes depending on order.
 
@@ -392,6 +394,8 @@ Still to add (phase 0/1):
 ## 7. Phases
 
 Each phase ends with green CI (format check + VM test).
+
+Progress: phases 0–7 are implemented. Phase 7 notes: the dashboard widget is an API widget (rendered by the dashboard app), unified search also matches tag paths (`#tag` searches only tags), the reference provider is only registered with the web interface, and the Files action is added through the public `BeforeTemplateRenderedEvent` and registered for both file action APIs (`@nextcloud/files` 3 for Nextcloud 32, 4 for 33+).
 
 | Phase                                           | Scope                                                                                                                                                                                                                       | Exit criteria                                                                                                                                                                                                |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

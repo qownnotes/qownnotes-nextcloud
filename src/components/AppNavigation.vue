@@ -42,7 +42,7 @@
 					@newNote="$emit('newNote', $event)"
 					@create="createFolder"
 					@moveFolder="moveFolder"
-					@moveNote="moveNote"
+					@moveNotes="moveNotes"
 					@delete="folderToDelete = $event" />
 			</template>
 
@@ -87,7 +87,9 @@
 					:dark="isDarkTheme"
 					@toggle="tagsStore.toggleFilter($event)"
 					@operations="runTagOperations"
-					@linkNote="linkNote"
+					@linkNotes="linkNotes"
+					@moveTag="moveTag"
+					@editColor="tagToColor = $event"
 					@delete="tagToDelete = $event" />
 				<NcAppNavigationItem
 					v-if="tagsStore.selectedTagIds.length > 0 || tagsStore.untagged"
@@ -102,6 +104,11 @@
 
 		<template #footer>
 			<ul class="app-navigation-entry__settings">
+				<NcAppNavigationItem :name="t('qownnotes', 'Deleted notes')" @click="$emit('openTrash')">
+					<template #icon>
+						<Delete :size="20" />
+					</template>
+				</NcAppNavigationItem>
 				<NcAppNavigationItem :name="t('qownnotes', 'Settings')" @click="$emit('openSettings')">
 					<template #icon>
 						<Cog :size="20" />
@@ -122,6 +129,11 @@
 			:message="t('qownnotes', 'Do you want to delete the tag \u201C{name}\u201D with all its child tags? The notes are not deleted.', { name: tagToDelete.name })"
 			:buttons="deleteTagButtons"
 			@update:open="tagToDelete = null" />
+		<TagColorDialog
+			v-if="tagToColor !== null"
+			:tag="tagToColor"
+			@save="runTagOperations"
+			@close="tagToColor = null" />
 	</NcAppNavigation>
 </template>
 
@@ -140,11 +152,13 @@ import NcCounterBubble from '@nextcloud/vue/components/NcCounterBubble'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 import Close from 'vue-material-design-icons/Close.vue'
 import Cog from 'vue-material-design-icons/Cog.vue'
+import Delete from 'vue-material-design-icons/Delete.vue'
 import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
 import Star from 'vue-material-design-icons/Star.vue'
 import TagOff from 'vue-material-design-icons/TagOff.vue'
 import FolderTreeItem from './FolderTreeItem.vue'
+import TagColorDialog from './TagColorDialog.vue'
 import TagTreeItem from './TagTreeItem.vue'
 import { errorMessage } from '../api.js'
 import { folderRoute } from '../router.js'
@@ -152,6 +166,7 @@ import { useFoldersStore } from '../stores/folders.js'
 import { useNotesStore } from '../stores/notes.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
+import { tagWithDescendants } from '../utils/tags.js'
 
 export default {
 	name: 'AppNavigation',
@@ -159,6 +174,7 @@ export default {
 	components: {
 		Close,
 		Cog,
+		Delete,
 		FolderTreeItem,
 		NcActionCheckbox,
 		NcActionInput,
@@ -172,6 +188,7 @@ export default {
 		Plus,
 		Star,
 		TagOff,
+		TagColorDialog,
 		TagTreeItem,
 	},
 
@@ -187,7 +204,7 @@ export default {
 		},
 	},
 
-	emits: ['selectFolder', 'showFavorites', 'newNote', 'openSettings'],
+	emits: ['selectFolder', 'showFavorites', 'newNote', 'openSettings', 'openTrash'],
 
 	data() {
 		return {
@@ -195,6 +212,7 @@ export default {
 			newTagName: '',
 			folderToDelete: null,
 			tagToDelete: null,
+			tagToColor: null,
 		}
 	},
 
@@ -260,18 +278,20 @@ export default {
 			}
 		},
 
-		async moveNote(noteId, category) {
-			const note = this.notesStore.get(noteId)
-			if (!note || note.category === category) {
+		async moveNotes(noteIds, category) {
+			const notes = noteIds.map((id) => this.notesStore.get(id)).filter((note) => note && note.category !== category)
+			if (notes.length === 0) {
 				return
 			}
 			try {
-				// Moving doesn't change the text, so changes of other clients can't get lost
-				await this.notesStore.update(noteId, { category }, true)
-				await Promise.all([this.foldersStore.load(), this.tagsStore.load()])
+				for (const note of notes) {
+					// Moving doesn't change the text, so changes of other clients can't get lost
+					await this.notesStore.update(note.id, { category }, true)
+				}
 			} catch (error) {
 				showError(t('qownnotes', 'The note could not be moved: {message}', { message: errorMessage(error) }))
 			}
+			await Promise.all([this.foldersStore.load(), this.tagsStore.load()])
 		},
 
 		async runTagOperations(operations) {
@@ -282,8 +302,23 @@ export default {
 			}
 		},
 
-		linkNote(noteId, tagId) {
-			return this.runTagOperations([{ op: 'link', noteId, tagId }])
+		linkNotes(noteIds, tagId) {
+			return this.runTagOperations(noteIds.map((noteId) => ({ op: 'link', noteId, tagId })))
+		},
+
+		/**
+		 * Moves a tag below another tag, or to the top level (parent ID 0)
+		 *
+		 * @param {number} tagId the tag
+		 * @param {number} parentId the new parent tag
+		 */
+		moveTag(tagId, parentId) {
+			const tag = this.tagsStore.tags.get(tagId)
+			// A tag can't be moved into itself or its child tags
+			if (!tag || tag.parentId === parentId || tagWithDescendants(this.tagsStore.tags, tagId).has(parentId)) {
+				return
+			}
+			return this.runTagOperations([{ op: 'update', id: tagId, parentId }])
 		},
 
 		createTag() {

@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace OCA\QOwnNotes\Model;
 
 use OCP\Files\File;
+use OCP\Files\GenericFileException;
+use OCP\Lock\LockedException;
 
 /**
  * A note file inside the note folder
@@ -63,7 +65,13 @@ class Note {
 
 	public function getContent(): string {
 		if ($this->content === null) {
-			$content = $this->file->getContent();
+			try {
+				$content = $this->file->getContent();
+			} catch (GenericFileException $e) {
+				// Nextcloud can't read a file while it is written by another request, which isn't reported as a
+				// locked file; as LockedException, the API retries the request and finally answers with 423 Locked
+				throw new LockedException($this->file->getPath(), $e);
+			}
 			// Notes are text files, so invalid UTF-8 is replaced instead of breaking the JSON responses
 			$this->content = mb_check_encoding($content, 'UTF-8') ? $content : (string)mb_convert_encoding($content, 'UTF-8', 'UTF-8');
 		}

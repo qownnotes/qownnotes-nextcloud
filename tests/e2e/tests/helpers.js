@@ -97,3 +97,16 @@ function escapeRegExp(text) {
 export function navigationEntry(page, name) {
 	return page.locator('.app-navigation-entry').filter({ has: page.locator('.app-navigation-entry__name', { hasText: new RegExp(`^\\s*${escapeRegExp(name)}\\s*$`, 'u') }) }).first()
 }
+
+/**
+ * Deletes top-level tags (with their child tags) created by a test
+ *
+ * @param {object} api the API client
+ * @param {string[]} names the tag names
+ */
+export async function deleteTags(api, names) {
+	const { tags } = await api.get('tags')
+	for (const tag of tags.filter((tag) => names.includes(tag.name))) {
+		await api.delete(`tags/${tag.id}`)
+	}
+}

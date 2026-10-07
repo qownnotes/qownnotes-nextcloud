@@ -540,6 +540,94 @@ def test_tags(node, label):
     occ(node, "files:scan --path=admin/files/Notes")
 
 
+def ocs(node, path, expect=200):
+    data, _, _ = http_json(node, "GET", f"{BASE_URL}/ocs/v2.php/{path}", expect=expect)
+    return data["ocs"]["data"]
+
+
+def test_note_history(node, label):
+    """Note details, versions and the trash by note ID, as used by the web interface"""
+    note, _, _ = api(node, "POST", "notes", {"title": "History", "category": "Hist", "content": "# History\n\nfirst"})
+    node.succeed("sleep 1.1")
+    api(node, "PUT", f"notes/{note['id']}", {"content": "# History\n\nsecond"})
+
+    info, _, _ = api(node, "GET", f"note/{note['id']}/info")
+    assert info["fileName"] == "History.md"
+    assert info["subFolderPath"] == "Hist"
+    assert info["path"] == "Notes/Hist/History.md"
+    assert info["size"] == len("# History\n\nsecond")
+    assert info["versionsAvailable"] is True and info["trashAvailable"] is True
+
+    versions, _, _ = api(node, "GET", f"note/{note['id']}/versions")
+    assert [version["data"] for version in versions["versions"]] == ["# History\n\nfirst"], versions
+    assert "<del>second</del><ins>first</ins>" in versions["versions"][0]["diffHtml"]
+    api(node, "GET", "note/999999/versions", expect=404)
+
+    # A deleted note keeps its tags when it is restored
+    api(node, "PUT", f"note/{note['id']}/tags", {"tagPaths": [["History tag"]]})
+    api(node, "DELETE", f"notes/{note['id']}", headers={"X-QOwnNotes-Relink-Tags": "1"})
+    assert "History tag|History.md|Hist|1" in tag_links(node)
+
+    trash, _, _ = api(node, "GET", "trash")
+    trashed = next(n for n in trash["notes"] if n["originalLocation"] == "Notes/Hist/History.md")
+    assert trashed["title"] == "History" and trashed["subFolderPath"] == "Hist"
+    assert trashed["content"] == "# History\n\nsecond"
+    assert all(n["originalLocation"].startswith("Notes/") for n in trash["notes"]), "Only notes of the note folder are listed"
+
+    api(node, "POST", "trash/restore", {"originalLocation": "Other/History.md", "deleted": trashed["deleted"]}, expect=400)
+    restored, _, _ = api(node, "POST", "trash/restore", {"originalLocation": trashed["originalLocation"], "deleted": trashed["deleted"]}, headers={"X-QOwnNotes-Relink-Tags": "1"})
+    assert restored["id"] is not None
+    assert "History tag|History.md|Hist|0" in tag_links(node)
+    note_tags, _, _ = api(node, "GET", f"note/{restored['id']}/tags")
+    assert [tag["path"] for tag in note_tags["tags"]] == [["History tag"]]
+    api(node, "POST", "trash/restore", {"originalLocation": trashed["originalLocation"], "deleted": trashed["deleted"]}, expect=404)
+
+
+def integrations_enabled(node):
+    """Which integrations of the web interface are available"""
+    widgets = ocs(node, "apps/dashboard/api/v1/widgets")
+    providers = ocs(node, "search/providers")
+    reference_providers = ocs(node, "references/providers")
+    _, _, files_page = http(node, "GET", f"{BASE_URL}/index.php/apps/files/", expect=200)
+    return {
+        "widget": "qownnotes-recent" in widgets,
+        "search": any(p["id"] == "qownnotes" for p in providers),
+        "reference": any(p["id"] == "qownnotes-note" for p in reference_providers),
+        "files": "qownnotes-files" in files_page,
+    }
+
+
+def test_integrations(node, label):
+    note, _, _ = api(node, "POST", "notes", {"title": "Integration note", "content": "# Integration note\n\nFind **me** here"})
+    api(node, "PUT", f"note/{note['id']}/tags", {"tagPaths": [["Searchable", "Child"]]})
+    assert integrations_enabled(node) == {"widget": True, "search": True, "reference": True, "files": True}
+
+    items = ocs(node, "apps/dashboard/api/v2/widget-items?widgets[]=qownnotes-recent")["qownnotes-recent"]["items"]
+    assert any(item["title"] == "Integration note" and item["link"].endswith(f"/apps/qownnotes/note/{note['id']}") for item in items), items
+
+    results = ocs(node, "search/providers/qownnotes/search?term=" + quote("integration #searchable/child"))
+    assert [entry["title"] for entry in results["entries"]] == ["Integration note"], results
+    assert "#Searchable/Child" in results["entries"][0]["subline"]
+    assert "Find me here" in results["entries"][0]["subline"]
+    assert ocs(node, "search/providers/qownnotes/search?term=" + quote("#unknowntag"))["entries"] == []
+
+    link = f"{BASE_URL}/index.php/apps/qownnotes/note/{note['id']}"
+    reference = ocs(node, "references/resolve?reference=" + quote(link, safe=""))["references"][link]
+    assert reference["richObject"]["name"] == "Integration note", reference
+    assert reference["richObject"]["description"] == "Find me here"
+
+    # All integrations of the web interface disappear in API-only mode
+    occ_app_config(node, "config:app:set qownnotes ui_enabled --value=no")
+    try:
+        assert integrations_enabled(node) == {"widget": False, "search": False, "reference": False, "files": False}
+        api(node, "GET", f"note/{note['id']}/info")
+    finally:
+        occ_app_config(node, "config:app:set qownnotes ui_enabled --value=yes")
+    assert integrations_enabled(node)["search"] is True
+
+    api(node, "DELETE", f"notes/{note['id']}")
+
+
 def test_version(node, label, pkg_version):
     print(f"Testing Nextcloud {label} ({pkg_version})")
     # Run one Nextcloud version at a time to keep memory usage low
@@ -558,5 +646,7 @@ def test_version(node, label, pkg_version):
     test_legacy_api(node, label, pkg_version)
     test_subfolders(node, label)
     test_tags(node, label)
+    test_note_history(node, label)
+    test_integrations(node, label)
 
     node.shutdown()

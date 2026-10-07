@@ -5,7 +5,7 @@
 
 import { defineStore } from 'pinia'
 import * as api from '../api.js'
-import { mergeNotes } from '../utils/notes.js'
+import { mergeNotes, rangeSelection } from '../utils/notes.js'
 
 /**
  * Thrown if a note was changed by another client since it was loaded
@@ -23,6 +23,10 @@ export const useNotesStore = defineStore('notes', {
 		notes: new Map(),
 		loaded: false,
 		lastSync: 0,
+		/** IDs of the notes selected for bulk actions */
+		selection: [],
+		/** The note where a range selection (Shift+click) starts */
+		selectionAnchor: null,
 	}),
 
 	getters: {
@@ -34,6 +38,7 @@ export const useNotesStore = defineStore('notes', {
 		async load() {
 			const { notes, lastModified } = await api.fetchNotes(this.loaded ? this.lastSync : 0)
 			this.notes = mergeNotes(this.notes, notes)
+			this.selection = this.selection.filter((id) => this.notes.has(id))
 			this.lastSync = lastModified
 			this.loaded = true
 		},
@@ -75,6 +80,40 @@ export const useNotesStore = defineStore('notes', {
 		async remove(id) {
 			await api.deleteNote(id)
 			this.notes.delete(id)
+			this.selection = this.selection.filter((selected) => selected !== id)
+		},
+
+		/**
+		 * Adds a note to the selection or removes it (Ctrl+click)
+		 *
+		 * @param {number} id the note ID
+		 * @param {number|null} openNoteId the opened note, which becomes part of a new selection
+		 */
+		toggleSelection(id, openNoteId) {
+			if (this.selection.length === 0 && openNoteId !== null && openNoteId !== id) {
+				this.selection = [openNoteId]
+			}
+			this.selection = this.selection.includes(id)
+				? this.selection.filter((selected) => selected !== id)
+				: [...this.selection, id]
+			this.selectionAnchor = id
+		},
+
+		/**
+		 * Selects the notes from the anchor to a note (Shift+click)
+		 *
+		 * @param {number[]} orderedIds the IDs of the note list, in their displayed order
+		 * @param {number} id the clicked note
+		 * @param {number|null} openNoteId the opened note, the anchor of a new selection
+		 */
+		selectRange(orderedIds, id, openNoteId) {
+			this.selection = rangeSelection(orderedIds, this.selectionAnchor ?? openNoteId, id)
+			this.selectionAnchor ??= openNoteId ?? id
+		},
+
+		clearSelection() {
+			this.selection = []
+			this.selectionAnchor = null
 		},
 	},
 })

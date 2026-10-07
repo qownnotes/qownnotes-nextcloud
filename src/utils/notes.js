@@ -132,3 +132,23 @@ export function parentPath(path) {
 export function baseName(path) {
 	return path.slice(path.lastIndexOf('/') + 1)
 }
+
+/**
+ * The notes between two notes of the note list (both included), for selecting with Shift+click
+ *
+ * @param {number[]} orderedIds the IDs of the note list, in their displayed order
+ * @param {number|null} anchorId the note that was selected first
+ * @param {number} targetId the clicked note
+ * @return {number[]}
+ */
+export function rangeSelection(orderedIds, anchorId, targetId) {
+	const target = orderedIds.indexOf(targetId)
+	const anchor = anchorId === null ? -1 : orderedIds.indexOf(anchorId)
+	if (target === -1) {
+		return []
+	}
+	if (anchor === -1) {
+		return [targetId]
+	}
+	return orderedIds.slice(Math.min(anchor, target), Math.max(anchor, target) + 1)
+}
