@@ -20,6 +20,7 @@ use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\ITempManager;
 use OCP\Lock\ILockingProvider;
+use OCP\Lock\LockedException;
 use PDO;
 use PHPUnit\Framework\TestCase;
 
@@ -29,8 +30,6 @@ class TagDatabaseTest extends TestCase {
 	private string $storedPath;
 	private int $etagCounter = 1;
 	private int $writes = 0;
-	/** @var (callable(): void)|null simulates another client writing between read and write */
-	private $beforeWrite = null;
 
 	protected function setUp(): void {
 		$this->dir = sys_get_temp_dir() . '/qownnotes-test-' . bin2hex(random_bytes(4));
@@ -45,13 +44,13 @@ class TagDatabaseTest extends TestCase {
 		rmdir($this->dir);
 	}
 
-	private function createDatabase(): TagDatabase {
+	private function createDatabase(?ILockingProvider $lockingProvider = null): TagDatabase {
 		$tempManager = $this->createMock(ITempManager::class);
 		$tempManager->method('getTemporaryFile')->willReturnCallback(fn (): string => tempnam($this->dir, 'tmp'));
 		$cacheFactory = $this->createMock(ICacheFactory::class);
 		$cacheFactory->method('createLocal')->willReturn($this->createMock(ICache::class));
 
-		return new TagDatabase($tempManager, $cacheFactory, $this->createMock(ILockingProvider::class));
+		return new TagDatabase($tempManager, $cacheFactory, $lockingProvider ?? $this->createMock(ILockingProvider::class));
 	}
 
 	private function createFile(?int $reportedSize = null): File {
@@ -261,8 +260,11 @@ class TagDatabaseTest extends TestCase {
 	public function testFailedTransactionDoesNotUploadAndRemovesCopy(): void {
 		$this->createStoredDatabase();
 		$before = file_get_contents($this->storedPath);
+		$lockingProvider = $this->createMock(ILockingProvider::class);
+		$lockingProvider->expects($this->once())->method('acquireLock')->with('qownnotes/notes.sqlite/1', ILockingProvider::LOCK_EXCLUSIVE, 'notes.sqlite');
+		$lockingProvider->expects($this->once())->method('releaseLock')->with('qownnotes/notes.sqlite/1', ILockingProvider::LOCK_EXCLUSIVE);
 		try {
-			$this->createDatabase()->modify($this->createFolder(), static function (TagWriter $writer): void {
+			$this->createDatabase($lockingProvider)->modify($this->createFolder(), static function (TagWriter $writer): void {
 				$writer->createTag('Not committed', 0);
 				throw new \RuntimeException('Operation failed');
 			});
@@ -278,17 +280,88 @@ class TagDatabaseTest extends TestCase {
 	public function testConcurrentChangeIsRetried(): void {
 		$this->createStoredDatabase();
 		$calls = 0;
-		$snapshot = $this->createDatabase()->modify($this->createFolder(), function (TagWriter $writer) use (&$calls): void {
+		$lockingProvider = $this->createMock(ILockingProvider::class);
+		$lockingProvider->expects($this->once())->method('acquireLock')->with('qownnotes/notes.sqlite/1', ILockingProvider::LOCK_EXCLUSIVE, 'notes.sqlite');
+		$lockingProvider->expects($this->once())->method('releaseLock')->with('qownnotes/notes.sqlite/1', ILockingProvider::LOCK_EXCLUSIVE);
+		$snapshot = $this->createDatabase($lockingProvider)->modify($this->createFolder(), function (TagWriter $writer) use (&$calls): void {
 			$calls++;
 			$writer->createTag('Tag ' . $calls, 0);
 			if ($calls === 1) {
-				// Another client uploads notes.sqlite while the changes are applied
-				$this->etagCounter++;
+				$this->simulateClientWrite('Client tag');
 			}
 		});
 
 		$this->assertSame(2, $calls);
 		$this->assertSame(1, $this->writes);
-		$this->assertSame(['Tag 2'], array_column($snapshot->tags, 'name'));
+		$this->assertSame(['Client tag', 'Tag 2'], array_column($snapshot->tags, 'name'));
+		$this->assertSame([], glob($this->dir . '/tmp*'));
+	}
+
+	private function simulateClientWrite(string $name): void {
+		// Simulate a whole-file upload changing the stored database, not the server's private copy.
+		$pdo = new PDO('sqlite:' . $this->storedPath, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+		$pdo->prepare('INSERT INTO tag (name) VALUES (?)')->execute([$name]);
+		$this->etagCounter++;
+	}
+
+	public function testConcurrentChangeWithIfMatchDoesNotOverwriteClient(): void {
+		$this->createStoredDatabase();
+		$calls = 0;
+		try {
+			$this->createDatabase()->modify($this->createFolder(), function (TagWriter $writer) use (&$calls): void {
+				$calls++;
+				$writer->createTag('Server tag', 0);
+				$this->simulateClientWrite('Client tag');
+			}, '"etag-1"');
+			$this->fail('Explicit If-Match must reject the changed database');
+		} catch (PreconditionFailedException $e) {
+			$this->assertSame(['etag' => 'etag-2'], $e->getCurrentData());
+			$this->assertSame(1, $calls);
+			$this->assertSame(0, $this->writes);
+			$this->assertSame(['Client tag'], array_column($this->createDatabase()->read($this->createFolder())->tags, 'name'));
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+	}
+
+	public function testRepeatedConcurrentChangesStopAfterOneRetry(): void {
+		$this->createStoredDatabase();
+		$calls = 0;
+		$lockingProvider = $this->createMock(ILockingProvider::class);
+		$lockingProvider->expects($this->once())->method('acquireLock');
+		$lockingProvider->expects($this->once())->method('releaseLock');
+		try {
+			$this->createDatabase($lockingProvider)->modify($this->createFolder(), function (TagWriter $writer) use (&$calls): void {
+				$calls++;
+				$writer->createTag('Server tag', 0);
+				$this->simulateClientWrite('Client tag ' . $calls);
+			});
+			$this->fail('Repeated changes must exhaust the retry');
+		} catch (PreconditionFailedException) {
+			$this->assertSame(2, $calls);
+			$this->assertSame(0, $this->writes);
+			$this->assertSame(['Client tag 1', 'Client tag 2'], array_column($this->createDatabase()->read($this->createFolder())->tags, 'name'));
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+	}
+
+	public function testLockFailureDoesNotStartOperation(): void {
+		$this->createStoredDatabase();
+		$before = file_get_contents($this->storedPath);
+		$lockingProvider = $this->createMock(ILockingProvider::class);
+		$lockingProvider->expects($this->once())->method('acquireLock')->willThrowException(new LockedException('notes.sqlite'));
+		$lockingProvider->expects($this->never())->method('releaseLock');
+		$calls = 0;
+		try {
+			$this->createDatabase($lockingProvider)->modify($this->createFolder(), static function (TagWriter $writer) use (&$calls): void {
+				$calls++;
+				$writer->createTag('Server tag', 0);
+			});
+			$this->fail('Lock failure should propagate');
+		} catch (LockedException) {
+			$this->assertSame(0, $calls);
+			$this->assertSame(0, $this->writes);
+			$this->assertSame($before, file_get_contents($this->storedPath));
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
 	}
 }
