@@ -54,11 +54,11 @@ class TagDatabaseTest extends TestCase {
 		return new TagDatabase($tempManager, $cacheFactory, $this->createMock(ILockingProvider::class));
 	}
 
-	private function createFile(): File {
+	private function createFile(?int $reportedSize = null): File {
 		$file = $this->createMock(File::class);
 		$file->method('getId')->willReturn(42);
 		$file->method('getEtag')->willReturnCallback(fn (): string => 'etag-' . $this->etagCounter);
-		$file->method('getSize')->willReturnCallback(fn (): int => (int)filesize($this->storedPath));
+		$file->method('getSize')->willReturnCallback(fn (): int => $reportedSize ?? (int)filesize($this->storedPath));
 		$file->method('isUpdateable')->willReturn(true);
 		$file->method('fopen')->willReturnCallback(fn () => fopen($this->storedPath, 'rb'));
 		$file->method('putContent')->willReturnCallback(function ($handle): void {
@@ -176,6 +176,103 @@ class TagDatabaseTest extends TestCase {
 		file_put_contents($this->storedPath, 'not a database');
 		$this->expectException(TagDatabaseException::class);
 		$this->createDatabase()->read($this->createFolder());
+	}
+
+	public function testRejectedCopiesAreRemoved(): void {
+		foreach ([false, true] as $wal) {
+			if ($wal) {
+				$pdo = $this->createStoredDatabase();
+				$pdo->exec('PRAGMA journal_mode = WAL');
+				unset($pdo);
+			} else {
+				file_put_contents($this->storedPath, 'not a database');
+			}
+
+			foreach ([false, true] as $write) {
+				try {
+					$database = $this->createDatabase();
+					if ($write) {
+						$database->modify($this->createFolder(), static fn (TagWriter $writer) => $writer->createTag('Tag', 0));
+					} else {
+						$database->read($this->createFolder());
+					}
+					$this->fail('Invalid database should be rejected');
+				} catch (TagDatabaseException) {
+					$this->assertSame([], glob($this->dir . '/tmp*'));
+					$this->assertSame(0, $this->writes);
+				}
+			}
+			unlink($this->storedPath);
+		}
+	}
+
+	public function testActualCopySizeIsLimited(): void {
+		$handle = fopen($this->storedPath, 'wb');
+		ftruncate($handle, TagDatabase::MAX_SIZE + 2);
+		fclose($handle);
+		$file = $this->createFile(100);
+		$folder = $this->createMock(Folder::class);
+		$folder->method('nodeExists')->willReturn(true);
+		$folder->method('get')->willReturn($file);
+
+		try {
+			$this->createDatabase()->read($folder);
+			$this->fail('Oversized database should be rejected even with a small reported size');
+		} catch (TagDatabaseException $e) {
+			$this->assertSame('notes.sqlite is too large', $e->getMessage());
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+	}
+
+	public function testSourceOpenFailureRemovesCopy(): void {
+		$file = $this->createMock(File::class);
+		$file->method('getEtag')->willReturn('etag-1');
+		$file->method('fopen')->willReturn(false);
+		$folder = $this->createMock(Folder::class);
+		$folder->method('nodeExists')->willReturn(true);
+		$folder->method('get')->willReturn($file);
+
+		try {
+			$this->createDatabase()->read($folder);
+			$this->fail('Unreadable database should be rejected');
+		} catch (TagDatabaseException $e) {
+			$this->assertSame('notes.sqlite can not be read', $e->getMessage());
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+	}
+
+	public function testSourceOpenExceptionRemovesCopy(): void {
+		$file = $this->createMock(File::class);
+		$file->method('getEtag')->willReturn('etag-1');
+		$file->method('fopen')->willThrowException(new \RuntimeException('Storage unavailable'));
+		$folder = $this->createMock(Folder::class);
+		$folder->method('nodeExists')->willReturn(true);
+		$folder->method('get')->willReturn($file);
+
+		try {
+			$this->createDatabase()->read($folder);
+			$this->fail('Storage exception should propagate');
+		} catch (\RuntimeException $e) {
+			$this->assertSame('Storage unavailable', $e->getMessage());
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+	}
+
+	public function testFailedTransactionDoesNotUploadAndRemovesCopy(): void {
+		$this->createStoredDatabase();
+		$before = file_get_contents($this->storedPath);
+		try {
+			$this->createDatabase()->modify($this->createFolder(), static function (TagWriter $writer): void {
+				$writer->createTag('Not committed', 0);
+				throw new \RuntimeException('Operation failed');
+			});
+			$this->fail('Failed operation should propagate');
+		} catch (\RuntimeException $e) {
+			$this->assertSame('Operation failed', $e->getMessage());
+			$this->assertSame($before, file_get_contents($this->storedPath));
+			$this->assertSame(0, $this->writes);
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
 	}
 
 	public function testConcurrentChangeIsRetried(): void {

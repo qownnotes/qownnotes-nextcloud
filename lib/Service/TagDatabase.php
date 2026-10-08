@@ -255,21 +255,39 @@ class TagDatabase {
 		}
 
 		$path = $this->getTempPath();
-		$source = $file->fopen('rb');
-		$target = fopen($path, 'wb');
-		if ($source === false || $target === false) {
-			throw new TagDatabaseException('notes.sqlite can not be read');
-		}
-
+		$source = false;
+		$target = false;
 		try {
-			stream_copy_to_stream($source, $target);
-		} finally {
-			fclose($source);
-			fclose($target);
-		}
+			$source = $file->fopen('rb');
+			$target = fopen($path, 'wb');
+			if ($source === false || $target === false) {
+				throw new TagDatabaseException('notes.sqlite can not be read');
+			}
 
-		$this->checkHeader($path);
-		return $path;
+			// Storage metadata can be stale or inaccurate. Bound the actual copy as well.
+			$copied = stream_copy_to_stream($source, $target, self::MAX_SIZE + 1);
+			if ($copied === false) {
+				throw new TagDatabaseException('notes.sqlite can not be read');
+			}
+			if ($copied > self::MAX_SIZE) {
+				throw new TagDatabaseException('notes.sqlite is too large');
+			}
+			if (!fflush($target)) {
+				throw new TagDatabaseException('notes.sqlite can not be read');
+			}
+			$this->checkHeader($path);
+			return $path;
+		} catch (\Throwable $e) {
+			$this->removeTemp($path);
+			throw $e;
+		} finally {
+			if (is_resource($source)) {
+				fclose($source);
+			}
+			if (is_resource($target)) {
+				fclose($target);
+			}
+		}
 	}
 
 	private function createTempDatabase(): string {

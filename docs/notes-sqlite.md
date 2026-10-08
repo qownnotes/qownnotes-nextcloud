@@ -27,8 +27,9 @@ The server updates links only for changes made through this app: the web interfa
 
 `notes.sqlite` is an untrusted file in the user's storage, which may also be on object storage. The server follows the rules of QOwnNotes Android:
 
-1. The file is never opened in place. The server copies it to a temporary file and deletes the copy afterwards.
+1. The file is never opened in place. The server copies it to a temporary file and deletes the copy afterwards, including when the file cannot be read or fails validation.
 2. Before use, the copy is checked: it must be an SQLite 3 database in rollback-journal mode (no write-ahead logging), pass `PRAGMA quick_check`, have the required tables and columns, a schema version (`appData.database_version`) of at least 15, and be at most 50 MiB.
+   The size limit is enforced on the copied bytes as well as the storage metadata, so stale size information cannot bypass it.
 3. Parsed tags are cached per file ETag, so repeated reads only cost a file `stat`.
 4. Changes are only made for schema versions 15 and 16. Files with a newer version are read-only (`writable: false`), until the server app supports that version.
 5. A change takes an exclusive lock, applies all operations of the request in one transaction with `journal_mode=DELETE`, checks the header again and uploads the file **only if rows changed**. Other tables like `trashItem` are never touched, and the file is never vacuumed or converted.

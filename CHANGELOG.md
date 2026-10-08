@@ -32,5 +32,6 @@
     link previews and smart picker for notes, and "Open in QOwnNotes" in the Files app; all of them are
     hidden in API-only mode
   - Changes of `notes.sqlite` within the same second always get a new ETag, so other clients notice them
+  - Rejected `notes.sqlite` copies are cleaned up, and the 50 MiB limit is enforced even with stale storage metadata
   - Documentation of the APIs (`docs/api/`), the handling of `notes.sqlite` and a migration guide for
     users of the QOwnNotesAPI and Nextcloud Notes apps
