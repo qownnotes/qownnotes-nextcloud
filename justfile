@@ -43,10 +43,10 @@ git-apply-patch:
 github-run-test:
     nix-shell -p act --run "act -W .github/workflows/vm-test.yml"
 
-# Open the project in the browser
+# Open the QOwnNotes app in the Docker dev server
 [group('dev')]
 open-browser:
-    xdg-open http://localhost:8081
+    xdg-open http://localhost:8081/index.php/apps/qownnotes
 
 # Run tests for multiple versions of Nextcloud
 [group('test')]
