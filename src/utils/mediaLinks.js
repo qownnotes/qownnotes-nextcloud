@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+import { getRequestToken } from '@nextcloud/auth'
+
 /**
  * Whether a link points to a file of the note folder (relative link without scheme)
  *
@@ -60,5 +62,7 @@ export function resolveRelativePath(subFolderPath, link) {
  * @return {string}
  */
 export function attachmentUrl(apiBase, noteId, link) {
-	return `${apiBase}/attachment/${noteId}?path=${encodeURIComponent(link.split(/[?#]/u, 1)[0])}`
+	// Images and download links cannot send the requesttoken header used by axios. Without a CSRF
+	// token, Nextcloud's CORS middleware rejects session authentication and logs the user out.
+	return `${apiBase}/attachment/${noteId}?path=${encodeURIComponent(link.split(/[?#]/u, 1)[0])}&requesttoken=${encodeURIComponent(getRequestToken())}`
 }

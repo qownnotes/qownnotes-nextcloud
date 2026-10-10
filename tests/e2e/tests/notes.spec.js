@@ -139,6 +139,39 @@ test('the preview renders tasks that can be checked', async ({ page }) => {
 	await api.delete(`notes/${note.id}`)
 })
 
+test('an uploaded image loads in preview without logging out the session', async ({ page }) => {
+	const note = await api.post('notes', { title: uniqueName('E2E image'), content: '# Image\n\n' })
+	let filename
+	try {
+		await page.goto(`${APP_PATH}/note/${note.id}`)
+		await expect(page.locator('.cm-content')).toContainText('# Image')
+		await page.locator('.note-editor input[type="file"]').setInputFiles({
+			name: `${uniqueName('E2E image')}.png`,
+			mimeType: 'image/png',
+			buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE1sAAAAASUVORK5CYII=', 'base64'),
+		})
+		await expect.poll(async () => (await api.get(`notes/${note.id}`)).content).toContain('](media/')
+		filename = (await api.get(`notes/${note.id}`)).content.match(/\]\((media\/[^)]+)\)/u)[1]
+
+		const imageResponse = page.waitForResponse((response) => response.url().includes(`/attachment/${note.id}?`))
+		await page.getByRole('button', { name: 'Preview' }).click()
+		expect((await imageResponse).status()).toBe(200)
+		const image = page.locator('.note-preview img')
+		await expect(image).toHaveCount(1)
+		await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true)
+
+		// A fresh page request must still be authenticated after the image request.
+		await page.reload()
+		await expect(page.locator('.note-editor')).toBeVisible()
+		await expect(page).toHaveURL(new RegExp(`/note/${note.id}$`, 'u'))
+	} finally {
+		if (filename) {
+			await api.delete(`attachment/${note.id}?path=${encodeURIComponent(filename)}`)
+		}
+		await api.delete(`notes/${note.id}`)
+	}
+})
+
 test('subfolders can be renamed in the navigation', async ({ page }) => {
 	const folder = uniqueName('E2E tree')
 	await api.post('subfolders', { path: folder })

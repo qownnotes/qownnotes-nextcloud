@@ -106,6 +106,7 @@ If the user never set `notesPath`, the app takes the note folder of the Nextclou
 ### Attachments
 
 - `GET attachment/{noteId}?path=…` resolves `path` relative to the note's subfolder, like the links in the note (`../media/image.png`). Paths outside the note folder are answered with 404.
+- The web preview adds the Nextcloud CSRF token as a `requesttoken` query parameter to local image and attachment URLs, so browser requests can use session authentication on the CORS-enabled endpoint. External API clients continue to use their normal API authentication.
 - `POST attachment/{noteId}` stores images in the `media` folder and other files in the `attachments` folder at the note folder root, like QOwnNotes Desktop, and appends a number if the name is taken. The response `{"filename": "../media/image.png"}` contains the link relative to the note's subfolder, ready to be used in the note.
 - `DELETE attachment/{noteId}?path=…` only deletes files in the `media` and `attachments` folders.
 
