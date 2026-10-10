@@ -139,6 +139,66 @@ test('the preview renders tasks that can be checked', async ({ page }) => {
 	await api.delete(`notes/${note.id}`)
 })
 
+test('the live preview appears beside the editor and remembers its layout', async ({ page }) => {
+	const note = await api.post('notes', { title: uniqueName('E2E live preview'), content: '# Live preview\n\n- [ ] task\n' })
+	try {
+		await page.setViewportSize({ width: 1600, height: 900 })
+		await page.goto(`${APP_PATH}/note/${note.id}`)
+		await navigationEntry(page, 'Settings').click()
+		const settings = page.getByRole('dialog', { name: 'QOwnNotes settings' })
+		await settings.getByText('Show preview beside the editor', { exact: true }).click()
+		await settings.getByRole('button', { name: 'Save', exact: true }).click()
+		await expect(settings).not.toBeVisible()
+
+		const editor = page.locator('.cm-content')
+		const preview = page.locator('.note-preview')
+		await expect(editor).toBeVisible()
+		await expect(preview.locator('h1')).toHaveText('Live preview')
+		const editorBox = await editor.boundingBox()
+		const previewBox = await preview.boundingBox()
+		expect(previewBox.x).toBeGreaterThanOrEqual(editorBox.x + editorBox.width)
+
+		// Hold autosave so the preview must render the local draft, not a server response.
+		await page.route('**/api/v1/notes/*', async (route) => {
+			if (route.request().method() === 'PUT') {
+				await route.abort()
+			} else {
+				await route.continue()
+			}
+		})
+		await editor.click()
+		await page.keyboard.press('ControlOrMeta+End')
+		await page.keyboard.type('\n**Instant draft**')
+		await expect(preview.locator('strong')).toHaveText('Instant draft')
+		await preview.locator('input.task-list-item-checkbox').click()
+		await expect(editor).toContainText('- [x] task')
+		await page.unroute('**/api/v1/notes/*')
+		await editor.click()
+		await page.keyboard.press('ControlOrMeta+End')
+		await page.keyboard.type(' ')
+		await expect.poll(async () => (await api.get(`notes/${note.id}`)).content).toContain('**Instant draft**')
+
+		await page.getByRole('button', { name: 'Preview', exact: true }).click()
+		await expect(preview).toHaveCount(0)
+		await expect(editor).toBeVisible()
+		await page.getByRole('button', { name: 'Preview', exact: true }).click()
+		await page.reload()
+		await expect(editor).toBeVisible()
+		await expect(preview.locator('strong')).toHaveText('Instant draft')
+
+		await page.setViewportSize({ width: 600, height: 900 })
+		await expect(editor).toBeVisible()
+		await expect(preview).toBeVisible()
+		await expect.poll(async () => {
+			const editPane = await page.locator('.markdown-editor').boundingBox()
+			const previewPane = await preview.boundingBox()
+			return previewPane.y >= editPane.y + editPane.height
+		}).toBe(true)
+	} finally {
+		await api.delete(`notes/${note.id}`)
+	}
+})
+
 test('an uploaded image loads in preview without logging out the session', async ({ page }) => {
 	const note = await api.post('notes', { title: uniqueName('E2E image'), content: '# Image\n\n' })
 	let filename

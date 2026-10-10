@@ -39,6 +39,13 @@ npm ci && npm run build
 occ app:enable qownnotes
 ```
 
+## Live preview
+
+In **QOwnNotes settings → Editor**, enable **Show preview beside the editor** and save.
+The Markdown preview appears on the right and updates as you type, without waiting for autosave.
+Use the **Preview** button to hide or show it. On narrow screens, the preview appears below the editor.
+This preference is remembered in the current browser only.
+
 ## API-only mode
 
 Disable the web interface in the admin settings (section "QOwnNotes"), or with:

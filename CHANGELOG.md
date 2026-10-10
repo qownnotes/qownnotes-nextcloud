@@ -21,6 +21,7 @@
   - Web interface: note list with search, note subfolder tree with folder operations and drag and drop,
     tag tree with filtering (all/any tags, child tags, untagged notes), tag editor, Markdown editor with
     autosave and conflict handling, preview with checkable tasks, favorites and media uploads
+  - Optional live Markdown preview beside the editor, with a browser-local setting and stacked panes on narrow screens
   - Notes renamed or moved by the web interface keep their tags, and relative links to media files and
     attachments are adapted to the new subfolder depth (opt-in for API clients with `X-QOwnNotes-Relink-Tags`)
   - Tag management in the web interface: colors for light and dark themes, moving tags by drag and drop,

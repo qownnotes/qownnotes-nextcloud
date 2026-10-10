@@ -13,6 +13,7 @@ const DEFAULT_LOCAL_SETTINGS = {
 	showSubfolderNotes: true,
 	sortOrder: 'modified',
 	preview: false,
+	sideBySidePreview: false,
 	tagFilterMode: 'or',
 	includeChildTags: true,
 }

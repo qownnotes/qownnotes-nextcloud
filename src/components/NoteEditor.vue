@@ -78,19 +78,19 @@
 			<NoteTagEditor v-if="tagsStore.available" :noteId="noteId" :writable="tagsWritable" />
 		</div>
 
-		<div class="note-editor__body">
+		<div class="note-editor__body" :class="{ 'note-editor__body--split': preview && sideBySidePreview }">
+			<MarkdownEditor
+				v-if="!preview || sideBySidePreview"
+				ref="editor"
+				v-model="content"
+				:readonly="note.readonly"
+				:placeholder="t('qownnotes', 'Write your note …')" />
 			<NotePreview
 				v-if="preview"
 				:content="content"
 				:noteId="noteId"
 				:readonly="note.readonly"
 				@toggleTask="onToggleTask" />
-			<MarkdownEditor
-				v-else
-				ref="editor"
-				v-model="content"
-				:readonly="note.readonly"
-				:placeholder="t('qownnotes', 'Write your note …')" />
 		</div>
 
 		<input
@@ -220,6 +220,10 @@ export default {
 
 		preview() {
 			return this.settingsStore.local.preview
+		},
+
+		sideBySidePreview() {
+			return this.settingsStore.local.sideBySidePreview
 		},
 
 		dirty() {
@@ -457,7 +461,7 @@ export default {
 				return
 			}
 
-			if (this.preview) {
+			if (!this.$refs.editor) {
 				this.content = this.content.replace(/\n*$/u, '\n\n') + links.join('\n') + '\n'
 			} else {
 				this.$refs.editor.insertText(links.join('\n'))
@@ -473,6 +477,7 @@ export default {
 	flex-direction: column;
 	height: 100%;
 	padding: 0 16px 0 calc(var(--default-clickable-area) + 8px);
+	container-type: inline-size;
 }
 
 .note-editor__header {
@@ -525,6 +530,38 @@ export default {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: auto;
+}
+
+.note-editor__body--split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-rows: minmax(0, 1fr);
+	gap: 16px;
+	overflow: hidden;
+}
+
+.note-editor__body--split > * {
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+}
+
+.note-editor__body--split > .note-preview {
+	border-left: 1px solid var(--color-border);
+	padding-left: 16px;
+}
+
+@container (max-width: 600px) {
+	.note-editor__body--split {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.note-editor__body--split > .note-preview {
+		border-left: none;
+		border-top: 1px solid var(--color-border);
+		padding-left: 4px;
+	}
 }
 
 .note-editor__conflict-legend {

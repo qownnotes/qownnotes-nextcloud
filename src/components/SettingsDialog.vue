@@ -62,6 +62,15 @@
 			</p>
 		</NcAppSettingsSection>
 
+		<NcAppSettingsSection id="qownnotes-settings-editor" :name="t('qownnotes', 'Editor')">
+			<NcCheckboxRadioSwitch v-model="sideBySidePreview" type="switch">
+				{{ t('qownnotes', 'Show preview beside the editor') }}
+			</NcCheckboxRadioSwitch>
+			<p class="settings-hint">
+				{{ t('qownnotes', 'The preview updates as you type. This setting is saved in this browser only.') }}
+			</p>
+		</NcAppSettingsSection>
+
 		<div class="settings-dialog__buttons">
 			<NcButton variant="primary" :disabled="saving" @click="save">
 				{{ t('qownnotes', 'Save') }}
@@ -106,6 +115,7 @@ export default {
 	data() {
 		return {
 			form: {},
+			sideBySidePreview: false,
 			saving: false,
 		}
 	},
@@ -120,6 +130,7 @@ export default {
 			handler(open) {
 				if (open) {
 					this.form = { ...this.settingsStore.server }
+					this.sideBySidePreview = this.settingsStore.local.sideBySidePreview
 				}
 			},
 		},
@@ -136,6 +147,10 @@ export default {
 			this.saving = true
 			try {
 				await this.settingsStore.save(this.form)
+				if (this.sideBySidePreview && !this.settingsStore.local.sideBySidePreview) {
+					this.settingsStore.setLocal('preview', true)
+				}
+				this.settingsStore.setLocal('sideBySidePreview', this.sideBySidePreview)
 				showSuccess(t('qownnotes', 'Settings saved'))
 				this.$emit('update:open', false)
 				this.$emit('changed')
