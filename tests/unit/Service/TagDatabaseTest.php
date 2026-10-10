@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\QOwnNotes\Tests\unit\Service;
 
+use OCA\QOwnNotes\Exception\NotWritableException;
 use OCA\QOwnNotes\Exception\PreconditionFailedException;
 use OCA\QOwnNotes\Exception\TagDatabaseException;
 use OCA\QOwnNotes\Model\NoteLocation;
@@ -30,6 +31,8 @@ class TagDatabaseTest extends TestCase {
 	private string $storedPath;
 	private int $etagCounter = 1;
 	private int $writes = 0;
+	private bool $fileWritable = true;
+	private bool $folderCreatable = true;
 
 	protected function setUp(): void {
 		$this->dir = sys_get_temp_dir() . '/qownnotes-test-' . bin2hex(random_bytes(4));
@@ -44,11 +47,11 @@ class TagDatabaseTest extends TestCase {
 		rmdir($this->dir);
 	}
 
-	private function createDatabase(?ILockingProvider $lockingProvider = null): TagDatabase {
+	private function createDatabase(?ILockingProvider $lockingProvider = null, ?ICache $cache = null): TagDatabase {
 		$tempManager = $this->createMock(ITempManager::class);
 		$tempManager->method('getTemporaryFile')->willReturnCallback(fn (): string => tempnam($this->dir, 'tmp'));
 		$cacheFactory = $this->createMock(ICacheFactory::class);
-		$cacheFactory->method('createLocal')->willReturn($this->createMock(ICache::class));
+		$cacheFactory->method('createLocal')->willReturn($cache ?? $this->createMock(ICache::class));
 
 		return new TagDatabase($tempManager, $cacheFactory, $lockingProvider ?? $this->createMock(ILockingProvider::class));
 	}
@@ -58,7 +61,7 @@ class TagDatabaseTest extends TestCase {
 		$file->method('getId')->willReturn(42);
 		$file->method('getEtag')->willReturnCallback(fn (): string => 'etag-' . $this->etagCounter);
 		$file->method('getSize')->willReturnCallback(fn (): int => $reportedSize ?? (int)filesize($this->storedPath));
-		$file->method('isUpdateable')->willReturn(true);
+		$file->method('isUpdateable')->willReturnCallback(fn (): bool => $this->fileWritable);
 		$file->method('fopen')->willReturnCallback(fn () => fopen($this->storedPath, 'rb'));
 		$file->method('putContent')->willReturnCallback(function ($handle): void {
 			file_put_contents($this->storedPath, stream_get_contents($handle));
@@ -71,7 +74,7 @@ class TagDatabaseTest extends TestCase {
 	private function createFolder(): Folder {
 		$folder = $this->createMock(Folder::class);
 		$folder->method('getId')->willReturn(1);
-		$folder->method('isCreatable')->willReturn(true);
+		$folder->method('isCreatable')->willReturnCallback(fn (): bool => $this->folderCreatable);
 		$folder->method('nodeExists')->willReturnCallback(fn (string $name): bool => $name === 'notes.sqlite' && is_file($this->storedPath));
 		$folder->method('get')->willReturnCallback(fn (): File => $this->createFile());
 		$folder->method('newFile')->willReturnCallback(function (string $name, $handle): File {
@@ -95,6 +98,48 @@ class TagDatabaseTest extends TestCase {
 		$snapshot = $this->createDatabase()->read($this->createFolder());
 		$this->assertFalse($snapshot->exists());
 		$this->assertSame([], $snapshot->tags);
+	}
+
+	public function testMissingDatabaseInReadOnlyFolderIsNotWritable(): void {
+		$this->folderCreatable = false;
+		$snapshot = $this->createDatabase()->read($this->createFolder());
+		$this->assertFalse($snapshot->exists());
+		$this->assertFalse($snapshot->writable);
+	}
+
+	public function testReadOnlyDatabaseRejectsWrites(): void {
+		$this->createStoredDatabase();
+		$this->fileWritable = false;
+		$before = file_get_contents($this->storedPath);
+		try {
+			$this->createDatabase()->modify($this->createFolder(), static fn (TagWriter $writer) => $writer->createTag('Forbidden', 0));
+			$this->fail('Read-only database must reject writes');
+		} catch (NotWritableException) {
+			$this->assertSame($before, file_get_contents($this->storedPath));
+			$this->assertSame(0, $this->writes);
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+	}
+
+	public function testCachedSchemaRechecksSharingPermissions(): void {
+		$this->createStoredDatabase();
+		$cached = null;
+		$cache = $this->createMock(ICache::class);
+		$cache->method('get')->willReturnCallback(static function () use (&$cached): mixed {
+			return $cached;
+		});
+		$cache->expects($this->once())->method('set')->willReturnCallback(static function (string $key, array $value) use (&$cached): bool {
+			$cached = $value;
+			return true;
+		});
+		$database = $this->createDatabase(null, $cache);
+		$this->fileWritable = false;
+		$this->assertFalse($database->read($this->createFolder())->writable);
+		$this->fileWritable = true;
+		$this->assertTrue($database->read($this->createFolder())->writable, 'Granting access must not require a new ETag');
+		$this->fileWritable = false;
+		$this->assertFalse($database->read($this->createFolder())->writable, 'Revoking access must not require a new ETag');
+		$this->assertSame(0, $this->writes);
 	}
 
 	public function testRealDesktopSchemaCanBeReadAndModifiedWithoutMigration(): void {

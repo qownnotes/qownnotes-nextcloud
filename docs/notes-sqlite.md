@@ -32,6 +32,7 @@ The server updates links only for changes made through this app: the web interfa
    The size limit is enforced on the copied bytes as well as the storage metadata, so stale size information cannot bypass it.
 3. Parsed tags are cached per file ETag, so repeated reads only cost a file `stat`.
 4. Changes are only made for schema versions 15 and 16. Files with a newer version are read-only (`writable: false`), until the server app supports that version.
+   The `writable` flag also respects the current file permissions (or folder creation permission if the database is missing). Permissions are checked even for cached tag data, because share access may change without a new file ETag.
 5. A change takes an exclusive lock, applies all operations of the request in one transaction with `journal_mode=DELETE`, checks the header again and uploads the file **only if rows changed**. Other tables like `trashItem` are never touched, and the file is never vacuumed or converted.
 6. If another client changed the file while the server worked on it, the server applies the change again to the new file once, and otherwise fails with 412. API clients can send `If-Match` with the ETag they know to make sure they don't overwrite changes they haven't seen.
 7. If `notes.sqlite` doesn't exist, the tags are empty. The first tag change creates the file with the exact schema of QOwnNotes Desktop version 16, so QOwnNotes opens it without migration. Users can turn this off with the setting `createTagDatabase`.

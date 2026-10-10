@@ -80,13 +80,13 @@ class TagDatabase {
 		$this->ensureAvailable();
 		$file = $this->getFile($notesFolder);
 		if ($file === null) {
-			return new TagSnapshot(null, null, true, [], []);
+			return new TagSnapshot(null, null, $notesFolder->isCreatable(), [], []);
 		}
 
 		$cacheKey = $file->getId() . '-' . $file->getEtag();
 		$cached = $this->getCache()->get($cacheKey);
 		if (is_array($cached)) {
-			return TagSnapshot::fromArray($cached);
+			return $this->withPermissions(TagSnapshot::fromArray($cached), $file);
 		}
 
 		$path = $this->copyToTemp($file);
@@ -100,7 +100,12 @@ class TagDatabase {
 		}
 
 		$this->getCache()->set($cacheKey, $snapshot->toArray(), 3600);
-		return $snapshot;
+		return $this->withPermissions($snapshot, $file);
+	}
+
+	private function withPermissions(TagSnapshot $snapshot, File $file): TagSnapshot {
+		// Sharing permissions can change without changing the file ETag. Cache schema support, not permissions.
+		return new TagSnapshot($snapshot->etag, $snapshot->schemaVersion, $snapshot->writable && $file->isUpdateable(), $snapshot->tags, $snapshot->links);
 	}
 
 	/**
