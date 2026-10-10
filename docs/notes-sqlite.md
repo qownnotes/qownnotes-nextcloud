@@ -51,3 +51,7 @@ QOwnNotes Desktop changes `notes.sqlite` locally and the Nextcloud desktop clien
 | > 16                          | yes  | no    |
 
 When QOwnNotes Desktop changes the schema, the writable versions of this app (`TagDatabase::WRITABLE_SCHEMA_VERSIONS`) and of QOwnNotes Android have to be extended together.
+
+## Compatibility checks
+
+[`tests/fixtures/notes-sqlite/`](../tests/fixtures/notes-sqlite/README.md) contains a real database created by QOwnNotes Desktop 26.10.2 and clearly labeled synthetic data/negative variants. PHP tests and VM WebDAV round trips verify that server writes preserve the Desktop schema, page size, encoding and trash data. Parallel VM API/API and API/WebDAV writes using the same file ETag verify that only one succeeds, with no lost or partial batch changes. Genuine schema-15 and Android-written captures and recorded client requests remain follow-up validation.

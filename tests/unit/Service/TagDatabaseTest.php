@@ -97,6 +97,61 @@ class TagDatabaseTest extends TestCase {
 		$this->assertSame([], $snapshot->tags);
 	}
 
+	public function testRealDesktopSchemaCanBeReadAndModifiedWithoutMigration(): void {
+		foreach (['desktop-16-empty.sqlite', 'desktop-16-seeded.sqlite'] as $fixture) {
+			copy(__DIR__ . '/../../fixtures/notes-sqlite/' . $fixture, $this->storedPath);
+			$pdo = new PDO('sqlite:' . $this->storedPath);
+			$schema = $pdo->query('SELECT type, name, sql FROM sqlite_master ORDER BY type, name')->fetchAll(PDO::FETCH_ASSOC);
+			$trash = $pdo->query('SELECT * FROM trashItem')->fetchAll(PDO::FETCH_ASSOC);
+			$pageSize = $pdo->query('PRAGMA page_size')->fetchColumn();
+			$encoding = $pdo->query('PRAGMA encoding')->fetchColumn();
+			unset($pdo);
+
+			$database = $this->createDatabase();
+			$before = $database->read($this->createFolder());
+			$this->assertSame(16, $before->schemaVersion);
+			$this->assertTrue($before->writable);
+			$after = $database->modify($this->createFolder(), static function (TagWriter $writer): void {
+				$ids = $writer->resolvePath(['work', 'Server child'], true);
+				$writer->linkNote($ids[1], new NoteLocation('Server.md', 'Deep/Nested'));
+				$writer->relinkSubFolder('Work/Notes', 'Archive/Notes');
+			});
+			$this->assertCount(count($before->links) + 1, $after->links);
+			if ($fixture === 'desktop-16-seeded.sqlite') {
+				$this->assertSame('#ff8800', $after->tags[1]['color']);
+				$this->assertSame('#ffaa33', $after->tags[1]['darkColor']);
+				$this->assertSame('Work', $after->tags[1]['name'], 'Case-insensitive lookup reuses the Desktop tag');
+				$this->assertSame('Archive/Notes', $after->links[0]['subFolderPath']);
+				$this->assertTrue($after->links[2]['stale']);
+			}
+
+			$pdo = new PDO('sqlite:' . $this->storedPath);
+			$this->assertSame($schema, $pdo->query('SELECT type, name, sql FROM sqlite_master ORDER BY type, name')->fetchAll(PDO::FETCH_ASSOC));
+			$this->assertSame($trash, $pdo->query('SELECT * FROM trashItem')->fetchAll(PDO::FETCH_ASSOC));
+			$this->assertSame($pageSize, $pdo->query('PRAGMA page_size')->fetchColumn());
+			$this->assertSame($encoding, $pdo->query('PRAGMA encoding')->fetchColumn());
+			$this->assertSame('16', $pdo->query("SELECT value FROM appData WHERE name='database_version'")->fetchColumn());
+			$this->assertSame('ok', $pdo->query('PRAGMA quick_check')->fetchColumn());
+			$this->assertSame("\x01\x01", substr((string)file_get_contents($this->storedPath), 18, 2));
+			unset($pdo);
+		}
+	}
+
+	public function testNegativeFixturesAreRejectedWithoutUpload(): void {
+		foreach (['synthetic-wal.sqlite', 'synthetic-corrupt.sqlite'] as $fixture) {
+			copy(__DIR__ . '/../../fixtures/notes-sqlite/' . $fixture, $this->storedPath);
+			$before = file_get_contents($this->storedPath);
+			try {
+				$this->createDatabase()->modify($this->createFolder(), static fn (TagWriter $writer) => $writer->createTag('Server', 0));
+				$this->fail('Negative fixture should be rejected');
+			} catch (TagDatabaseException) {
+				$this->assertSame($before, file_get_contents($this->storedPath));
+				$this->assertSame(0, $this->writes);
+				$this->assertSame([], glob($this->dir . '/tmp*'));
+			}
+		}
+	}
+
 	public function testModifyCreatesDatabaseWithDesktopSchema(): void {
 		$snapshot = $this->createDatabase()->modify($this->createFolder(), static function (TagWriter $writer): void {
 			$writer->linkNote($writer->createTag('Work', 0), new NoteLocation('Note.md', ''));

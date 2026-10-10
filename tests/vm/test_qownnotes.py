@@ -545,6 +545,32 @@ def ocs(node, path, expect=200):
     return data["ocs"]["data"]
 
 
+def test_desktop_database_fixture(node, label):
+    """A real Desktop schema, uploaded and downloaded through WebDAV, with synthetic rows."""
+    api(node, "PUT", "settings", {"notesPath": "DesktopFixture"})
+    try:
+        api(node, "POST", "notes", {"title": "Meeting", "category": "Work/Notes"})
+        node.succeed(f"curl -fsS -u {AUTH} -T /etc/qownnotes-desktop-fixture.sqlite {BASE_URL}/remote.php/dav/files/admin/DesktopFixture/notes.sqlite")
+        tags, _, _ = api(node, "GET", "tags")
+        assert tags["schemaVersion"] == 16 and tags["writable"] is True
+        work = next(t for t in tags["tags"] if t["name"] == "Work")
+        assert work["color"] == "#ff8800" and work["darkColor"] == "#ffaa33"
+        assert work["children"][0]["name"] == "Project"
+        moved, _, _ = api(node, "PATCH", "subfolders", {"path": "Work", "newPath": "Archive"})
+        assert moved["tagsRelinked"] is True
+        node.succeed(f"curl -fsS -u {AUTH} -o /tmp/desktop-roundtrip.sqlite {BASE_URL}/remote.php/dav/files/admin/DesktopFixture/notes.sqlite")
+        schema_query = "SELECT type, name, sql FROM sqlite_master ORDER BY type, name"
+        before = node.succeed(f"sqlite3 /etc/qownnotes-desktop-fixture.sqlite {shlex.quote(schema_query)}")
+        after = node.succeed(f"sqlite3 /tmp/desktop-roundtrip.sqlite {shlex.quote(schema_query)}")
+        assert before == after, "Desktop schema must remain untouched"
+        assert node.succeed("sqlite3 /tmp/desktop-roundtrip.sqlite 'PRAGMA quick_check'").strip() == "ok"
+        assert node.succeed("sqlite3 /tmp/desktop-roundtrip.sqlite \"SELECT file_name,file_size FROM trashItem\"").strip() == "Deleted.md|42"
+        assert node.succeed("sqlite3 /tmp/desktop-roundtrip.sqlite \"SELECT note_sub_folder_path FROM noteTagLink WHERE note_file_name='Meeting.md'\"").strip() == "Archive/Notes"
+        assert node.succeed("od -An -tu1 -j18 -N2 /tmp/desktop-roundtrip.sqlite").split() == ["1", "1"]
+    finally:
+        api(node, "PUT", "settings", {"notesPath": "Notes"})
+
+
 def test_note_history(node, label):
     """Note details, versions and the trash by note ID, as used by the web interface"""
     note, _, _ = api(node, "POST", "notes", {"title": "History", "category": "Hist", "content": "# History\n\nfirst"})
@@ -732,6 +758,8 @@ def test_version(node, label, pkg_version):
     test_legacy_api(node, label, pkg_version)
     test_subfolders(node, label)
     test_tags(node, label)
+    test_desktop_database_fixture(node, label)
+    node.succeed("python3 /etc/qownnotes-tag-concurrency.py")
     test_note_history(node, label)
     test_integrations(node, label)
     test_client_contracts(node, label)

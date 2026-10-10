@@ -77,9 +77,18 @@ let
         };
         extraAppsEnable = true;
       };
-      environment.etc."nextcloud-adminpass".text = "adminpass";
-      # For verifying notes.sqlite files written by the app
-      environment.systemPackages = [ pkgs26_05.sqlite ];
+      environment = {
+        etc = {
+          "nextcloud-adminpass".text = "adminpass";
+          "qownnotes-tag-concurrency.py".source = ./tag_concurrency.py;
+          "qownnotes-desktop-fixture.sqlite".source = ../fixtures/notes-sqlite/desktop-16-seeded.sqlite;
+        };
+        # For verifying notes.sqlite files written by the app
+        systemPackages = [
+          pkgs26_05.sqlite
+          pkgs26_05.python3
+        ];
+      };
     };
   };
 
