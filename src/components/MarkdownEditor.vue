@@ -12,7 +12,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState } from '@codemirror/state'
 import { drawSelection, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
-import { markdownEditorHighlighting } from '../utils/markdownEditor.js'
+import { markdownEditorHighlighting, toggleTaskCheckbox } from '../utils/markdownEditor.js'
 
 const theme = EditorView.theme({
 	'&': {
@@ -99,7 +99,13 @@ export default {
 					highlightActiveLine(),
 					highlightSelectionMatches(),
 					search({ top: true }),
-					keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+					keymap.of([
+						{ key: 'Ctrl-Space', run: toggleTaskCheckbox, preventDefault: true },
+						...defaultKeymap,
+						...historyKeymap,
+						...searchKeymap,
+						indentWithTab,
+					]),
 					markdownEditorHighlighting(),
 					EditorView.lineWrapping,
 					placeholder(this.placeholder),

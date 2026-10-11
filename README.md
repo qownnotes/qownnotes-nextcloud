@@ -44,6 +44,9 @@ occ app:enable qownnotes
 Edit mode highlights headings, inline formatting, links, task checkboxes, Markdown markers and comments.
 Fenced code blocks with a language label (for example, `js`, `python` or `php`) also get syntax highlighting; language support is loaded on demand.
 
+Press **Ctrl+Space** with the cursor on a task line to check or uncheck its checkbox (`- [ ]` / `- [x]`).
+This also works for nested tasks and tasks in blockquotes or numbered lists, and can be undone like a normal edit.
+
 ## Live preview
 
 In **QOwnNotes settings → Editor**, enable **Show preview beside the editor** and save.
