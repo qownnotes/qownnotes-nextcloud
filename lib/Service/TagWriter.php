@@ -128,10 +128,15 @@ class TagWriter {
 			throw new InvalidInputException('The tag does not exist');
 		}
 
+		$before = $this->getTotalChanges();
 		$this->pdo->prepare('INSERT OR IGNORE INTO noteTagLink (tag_id, note_file_name, note_sub_folder_path) VALUES (?, ?, ?)')
 			->execute([$tagId, $note->fileName, $note->subFolderPath]);
 		$this->pdo->prepare('UPDATE noteTagLink SET stale_date = NULL WHERE tag_id = ? AND note_file_name = ? AND note_sub_folder_path = ? AND stale_date IS NOT NULL')
 			->execute([$tagId, $note->fileName, $note->subFolderPath]);
+
+		if ($this->getTotalChanges() === $before) {
+			return;
+		}
 
 		// QOwnNotes sorts tags by their most recent use and touches all ancestors of a linked tag
 		$ids = [$tagId, ...$this->getAncestorIds($tagId)];
@@ -221,6 +226,28 @@ class TagWriter {
 	public function markNoteNotStale(NoteLocation $note): void {
 		$this->pdo->prepare('UPDATE noteTagLink SET stale_date = NULL WHERE stale_date IS NOT NULL AND note_file_name = ? AND note_sub_folder_path = ?')
 			->execute([$note->fileName, $note->subFolderPath]);
+	}
+
+	/**
+	 * Desktop's broken-link lifecycle, run only as part of an already changed transaction.
+	 *
+	 * @param list<NoteLocation> $notes
+	 */
+	public function reconcileLinks(array $notes): void {
+		$existing = [];
+		foreach ($notes as $note) {
+			$existing[$note->subFolderPath . "\0" . $note->fileName] = true;
+		}
+		$mark = $this->pdo->prepare('UPDATE noteTagLink SET stale_date = ? WHERE id = ? AND stale_date IS NULL');
+		$revive = $this->pdo->prepare('UPDATE noteTagLink SET stale_date = NULL WHERE id = ? AND stale_date IS NOT NULL');
+		foreach ($this->pdo->query('SELECT id, note_file_name, note_sub_folder_path FROM noteTagLink')->fetchAll(PDO::FETCH_ASSOC) as $link) {
+			if (isset($existing[$link['note_sub_folder_path'] . "\0" . $link['note_file_name']])) {
+				$revive->execute([$link['id']]);
+			} else {
+				$mark->execute([self::now(), $link['id']]);
+			}
+		}
+		$this->pdo->exec("DELETE FROM noteTagLink WHERE stale_date IS NOT NULL AND datetime(stale_date) < datetime('now', '-10 days')");
 	}
 
 	/**

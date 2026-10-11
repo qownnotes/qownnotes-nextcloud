@@ -4,8 +4,8 @@
   "desktopExecutableSha256": "a94c211f1f3942aed6072b7d5e55876dd88f73b6bcc40502fa259cda46505af1",
   "fixtures": {
     "desktop-16-empty.sqlite": "c9d6273b8bc559a6bc44469f9f098c0d4af3f23d9fb643353f87cc0ee9645380",
-    "desktop-16-seeded.sqlite": "5844541e8a4c98b4d212c37cf120fd657f15d6495aa7f02112ca06cc96418365",
+    "desktop-16-seeded.sqlite": "2a46e795ab6f722e19ffd24f3363925b8a2828cfb67b5d1992d7234484f6b8ad",
     "synthetic-corrupt.sqlite": "abf11a49f48babb8e15b8516dd60778b292bd2a724dadd956ee5a190deee4dbd",
-    "synthetic-wal.sqlite": "2ceb53784f6f749a630eccf3a34871db8da6c8d3631eba57e018db4af63eda07"
+    "synthetic-wal.sqlite": "1b359b28d7d81658238924becb16ca0bbba292af49f93f2cc9fe0967d9a4a788"
   }
 }

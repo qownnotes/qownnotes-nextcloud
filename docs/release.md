@@ -39,6 +39,7 @@ The app uses CalVer versions (`YY.M.patch`, e.g. `26.10.0`).
 - [ ] Obtain the app-specific `qownnotes` certificate and register the app. A certificate for another app ID cannot be reused.
 - [ ] Verify the signed archive with Nextcloud, upload it to a GitHub release and publish it in the app store.
 - [ ] Ship Desktop and Android capability-discovery changes with legacy fallback (see [the plan](plan.md#10-client-changes-and-migration)); record the first supported client versions in the migration guide.
-- [ ] Capture the remaining genuine schema-15 and Android-written databases and perform the manual client sync checks described in the plan.
+- [x] Capture genuine schema-15 and Android-written databases with provenance and compatibility tests.
+- [ ] Perform the manual client sync checks described in the plan.
 
 The preflight does not claim that signing, app store publication or client acceptance testing has succeeded. Those require external credentials or client runtimes and are separate release gates.

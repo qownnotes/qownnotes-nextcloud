@@ -77,7 +77,7 @@ CREATE UNIQUE INDEX idxUniqueTag ON tag (name, parent_id);
 CREATE TABLE noteTagLink (
   id INTEGER PRIMARY KEY,
   tag_id INTEGER,
-  note_file_name VARCHAR(255) DEFAULT '',   -- file name incl. suffix, e.g. "Meeting.md"
+  note_file_name VARCHAR(255) DEFAULT '',   -- base name WITHOUT suffix, e.g. "Meeting"
   note_sub_folder_path TEXT DEFAULT '',     -- "/"-separated, relative to note folder, '' = root
   created DATETIME DEFAULT current_timestamp,
   stale_date DATETIME DEFAULT NULL          -- set when the note is missing; purged after 10 days
@@ -89,7 +89,7 @@ CREATE TABLE trashItem (...);  -- desktop-local trash, not touched by the server
 
 Desktop behaviors the server must reproduce:
 
-- **Identity**: a note is identified only by `(note_file_name, note_sub_folder_path)`. There are no IDs shared with files.
+- **Identity**: a note is identified only by `(note_file_name, note_sub_folder_path)`, where `note_file_name` is the base name **without** its suffix. Desktop's `Tag` queries bind `Note::getName()`, not the disk file name. There are no IDs shared with files.
 - **Rename note**: `UPDATE noteTagLink SET note_file_name = new WHERE note_file_name = old AND note_sub_folder_path = path`.
 - **Rename/move subfolder**: prefix-only replacement (`path = old OR path LIKE old || '/%'`) so `work` does not affect `workplace`.
 - **Missing notes**: links are marked stale (`stale_date`), un-staled if the note reappears, and deleted once stale for more than 10 days (`Tag::removeBrokenLinks`).
@@ -387,7 +387,7 @@ Still to add (phase 0/1):
 - Done: `composer.json` with php-cs-fixer (`nextcloud/coding-standard`), psalm, phpunit, `nextcloud/ocp`, `.php-cs-fixer.dist.php` (required by the shared php-cs-fixer hook) and `psalm.xml`.
 - ~~`package.json` with Vite, eslint (`@nextcloud/eslint-config`), stylelint, vitest.~~ Done (without stylelint).
 - Done: `docker/` dev environment (official Nextcloud image instead of the pre-release image, with the signing script) and Playwright tests in `tests/e2e/`. Originally: `docker/` dev environment ported from qownnotesapi (Nextcloud pre-release image, port 8081, app mounted into `custom_apps`, signing script). Then extend `term.kdl` with the docker compose and `npm run watch` panes again.
-- Partly done: `tests/fixtures/notes-sqlite/` contains a real schema-16 database created by QOwnNotes Desktop 26.10.2, an explicitly synthetic populated variant (nested tags, colors, root/nested links, stale link and trash row), WAL/corrupt negative cases, provenance hashes and an isolated headless regeneration script. Unit tests and VM WebDAV round trips verify that writes leave the Desktop schema and trash data untouched. Genuine schema-15 and Android-written captures still require suitable client runtimes.
+- Done: `tests/fixtures/notes-sqlite/` contains genuine Desktop schema-15 (26.5.10 AppImage) and schema-16 (26.10.2) captures, a database modified by Android's production writer on the API 36 emulator, explicitly synthetic test rows and WAL/corrupt negative cases, provenance hashes and an isolated headless regeneration script. Unit tests and VM WebDAV round trips verify that writes leave the client schema and trash data untouched. Client auditing corrected tag keys to base names without suffixes.
 - Done for the frontend (Composer has no runtime dependencies yet): Nix build of the app for the VM test including the frontend: `buildNpmPackage` with `npmDepsHash` for `js/` and a vendored or FOD Composer install, replacing the plain `runCommand` copy in `tests/vm/basic.nix`.
 - Done: VM endpoint assertions (WebDAV `PUT`/`DELETE` + `note/*`), Notes API conformance (create/list/chunk/prune/ETag/412/settings/attachments), subfolder operations, Desktop-schema WebDAV/tag round trips and API-only-mode checks.
 - Done: release tooling: `docker/sign-app.sh` (only the files listed in `release-files.txt` instead of an exclusion list, also used for the app in the VM test), `create_release.yml`, CalVer versioning, `AGENTS.md` (version location, release files). `term.kdl` has the docker compose and `npm run watch` panes again.
@@ -398,7 +398,7 @@ Each phase ends with green CI (format check + VM test).
 
 Progress: phases 0–7 are implemented, phase 8 is prepared: release tooling (`release-files.txt`, `docker/sign-app.sh`, `just sign-app`, `create_release.yml`, `docs/release.md`), app store metadata and screenshots, API docs in `docs/api/`, `docs/notes-sqlite.md` and `docs/migration.md`. Still open for phase 8: the app store certificate and registration, the first app store release and the client releases from section 10. Phase 7 notes: the dashboard widget is an API widget (rendered by the dashboard app), unified search also matches tag paths (`#tag` searches only tags), the reference provider is only registered with the web interface, and the Files action is added through the public `BeforeTemplateRenderedEvent` and registered for both file action APIs (`@nextcloud/files` 3 for Nextcloud 32, 4 for 33+).
 
-Release preflight is implemented as `just release-check`, with regression tests and shared validation in the draft-release workflow. It checks CalVer, all package version fields, release notes, required manifest inputs, symlinks and app store screenshot paths. Signing additionally requires the built frontend and fails on missing manifest inputs rather than silently omitting them. See the [first-release checklist](release.md#first-release-checklist) for external gates. “Implemented” does not mean every phase's acceptance gate is complete: real patched-client sync checks, genuine schema-15 and Android-written captures, signed-archive verification and publication remain pending. Client contracts and synthetic fixtures are not substitutes for those checks.
+Release preflight is implemented as `just release-check`, with regression tests and shared validation in the draft-release workflow. It checks CalVer, all package version fields, release notes, required manifest inputs, symlinks and app store screenshot paths. Signing additionally requires the built frontend and fails on missing manifest inputs rather than silently omitting them. See the [first-release checklist](release.md#first-release-checklist) for external gates. “Implemented” does not mean every phase's acceptance gate is complete: real patched-client sync checks, signed-archive verification and publication remain pending. Client contracts and synthetic fixtures are not substitutes for those checks. Signing and publication are explicitly out of the current code-and-tests scope, per the user's instruction.
 
 | Phase                                           | Scope                                                                                                                                                                                                                       | Exit criteria                                                                                                                                                                                                |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -420,7 +420,10 @@ Release preflight is implemented as `just release-check`, with regression tests 
 - **Concurrency tests**: two parallel tag writes (one wins, the other retries or gets 412), a WebDAV upload of `notes.sqlite` during an API write, and a lock timeout.
   Unit tests simulate external database changes during a write and verify that retries preserve those changes, explicit `If-Match` rejects them, repeated races stop after one retry, and locks are released on success and failure. A failed lock acquisition never starts a write. The VM also launches real parallel API/API and API/WebDAV requests with the same file ETag, verifies exactly one writer succeeds (the other receives 412 or 423), and checks stored rows and database integrity over three rounds per Nextcloud version. These stress tests do not force every critical interleaving; lock failures are covered with unit mocks rather than a real backend timeout.
 - **Frontend**: vitest for stores and utilities (tag tree, filter logic, relative media link rewriting), Playwright for E2E smoke tests against docker.
-- **Client contract tests**: request templates transcribed from pinned versions of `NextcloudBackend.kt` and `cloudservice.cpp` live in `tests/fixtures/client-contracts/` and are replayed in the multi-version VM test (including Android's `internalPath` dependency for versions). These are synthetic fixtures, not network recordings. A real Desktop schema-16 database is now tested separately. Recorded client tag-file requests, a genuine schema-15 database and Android-written captures remain follow-up work.
+
+Latest local checks (2026-10-11): PHP syntax/style/Psalm and **184 unit tests (403 assertions)** pass; frontend lint and **32 unit tests** pass; release validation and **14 release tests** pass; the **Nextcloud 32–34 VM matrix** passes, including genuine client database round trips, concurrent writes, tag search and trash/restore; all **14 browser E2E tests** pass against the Docker development server. Browser checks include conflicts, image uploads, version restore and trash restore with tags; they do not replace Desktop/Android end-to-end acceptance. Nextcloud 35 remains unavailable in the pinned package set.
+
+- **Client contract tests**: request templates transcribed from pinned versions of `NextcloudBackend.kt` and `cloudservice.cpp` live in `tests/fixtures/client-contracts/` and are replayed in the multi-version VM test (including Android's `internalPath` dependency for versions). These are synthetic fixtures, not network recordings. Genuine Desktop schemas 15/16 and an Android-written database are tested separately. Recorded client tag-file requests and real-server client sync remain follow-up work.
 
 ## 9. `notes.sqlite` Concurrency Model
 
@@ -434,6 +437,8 @@ The file is written by up to three parties: QOwnNotes Desktop (locally, synced v
 
 ### QOwnNotes Android (`backend-nextcloud`)
 
+Implemented and pushed in Android commit `5380645`; formatting, unit tests, debug build, Room migrations and tag writer instrumentation tests pass on the API 36 emulator. Real-server SSO/end-to-end acceptance and a client release are still pending.
+
 1. Read capabilities. If `qownnotes` is present and `notes_api_version` contains a supported 1.x (≥1.2), use `qownnotes.api_base` for **both** `NotesApi` and `QOwnNotesApi`.
 2. Otherwise fall back to today's behavior (`/apps/notes/api/v1/` + `/apps/qownnotesapi/api/v1/`, `notes` capability required).
 3. `validateCapabilities` must no longer throw `NotesAppMissing` when only `qownnotes` exists.
@@ -442,6 +447,8 @@ The file is written by up to three parties: QOwnNotes Desktop (locally, synced v
 6. Later (optional): when `qownnotes_api_version >= 1.1` and `tags.writable`, switch tag sync from whole-file WebDAV to the tags API, and send `X-QOwnNotes-Relink-Tags: 1` instead of relinking locally.
 
 ### QOwnNotes Desktop (`src/services/cloudservice.cpp`)
+
+Implemented and pushed in Desktop commit `a921b7819` (26.10.5/build 1398), including asynchronous capability discovery, legacy fallback, detected-app labels and stale-reply generation guards. The Nix Qt6 application build and Qt6 unit suite pass (tests use an isolated configuration and the matching Qt plugin directory). Real-server client acceptance and a client release are still pending.
 
 1. Replace the static `rootPath` with a value resolved from `/ocs/v1.php/cloud/capabilities`: `qownnotes.api_base` if present, else `/index.php/apps/qownnotesapi/api/v1/`.
 2. Settings dialog: show which server app was detected ("QOwnNotes" or "QOwnNotesAPI") and link to the new app in the "app missing" hint.

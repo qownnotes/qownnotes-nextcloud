@@ -450,7 +450,7 @@ def test_tags(node, label):
     assert sqlite(node, "SELECT value FROM appData WHERE name = 'database_version'") == "16"
     assert sqlite(node, "PRAGMA journal_mode") == "delete"
     assert sqlite(node, "PRAGMA quick_check") == "ok"
-    assert tag_links(node) == ["Important|Nested.md|Work/Project|0", "Project A|Nested.md|Work/Project|0"]
+    assert tag_links(node) == ["Important|Nested|Work/Project|0", "Project A|Nested|Work/Project|0"]
 
     tags, _, _ = api(node, "GET", "tags")
     assert tags["etag"] == etag
@@ -481,14 +481,14 @@ def test_tags(node, label):
         {"op": "unlink", "noteId": nested["id"], "tagId": top["Important"]["id"]},
     ]})
     assert batch["etag"]
-    assert tag_links(node) == ["Important|Renamed note.md|Work|0", "Old stuff|Renamed note.md|Work|0", "Project A|Nested.md|Work/Project|0"]
+    assert tag_links(node) == ["Important|Renamed note|Work|0", "Old stuff|Renamed note|Work|0", "Project A|Nested|Work/Project|0"]
     api(node, "POST", "tags/batch", {"operations": [{"op": "explode"}]}, expect=400)
     assert len(tag_links(node)) == 3, "Failed batches must not change anything"
 
     links, _, _ = api(node, "GET", "tag-links")
     by_file = {link["fileName"]: link for link in links["links"]}
-    assert by_file["Nested.md"]["noteId"] == nested["id"]
-    assert by_file["Renamed note.md"]["noteId"] == renamed["id"]
+    assert by_file["Nested"]["noteId"] == nested["id"]
+    assert by_file["Renamed note"]["noteId"] == renamed["id"]
 
     note_tags, _, _ = api(node, "GET", f"note/{renamed['id']}/tags")
     assert sorted(t["name"] for t in note_tags["tags"]) == ["Important", "Old stuff"]
@@ -496,13 +496,13 @@ def test_tags(node, label):
     # Moving a subfolder moves the tag links of its notes
     moved, _, _ = api(node, "PATCH", "subfolders", {"path": "Work/Project", "newPath": "Archive/Project"})
     assert moved["tagsRelinked"] is True
-    assert "Project A|Nested.md|Archive/Project|0" in tag_links(node)
+    assert "Project A|Nested|Archive/Project|0" in tag_links(node)
 
     # The Notes API only relinks tags on request (QOwnNotes Android relinks them itself)
     api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested moved"}, headers={"X-QOwnNotes-Relink-Tags": "1"})
-    assert "Project A|Nested moved.md|Archive/Project|0" in tag_links(node)
+    assert "Project A|Nested moved|Archive/Project|0" in tag_links(node)
     api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested"})
-    assert "Project A|Nested moved.md|Archive/Project|0" in tag_links(node)
+    assert "Project A|Nested moved|Archive/Project|0" in tag_links(node)
     api(node, "PUT", f"notes/{nested['id']}", {"title": "Nested moved"})
 
     # With the relink header, relative links to media files are adapted to the new subfolder depth
@@ -515,7 +515,7 @@ def test_tags(node, label):
     # Deleting a subfolder marks the links of its notes stale, QOwnNotes keeps them for 10 days
     deleted, _, _ = api(node, "DELETE", "subfolders?path=Archive")
     assert deleted["tagsUpdated"] is True
-    assert "Project A|Nested moved.md|Archive/Project|1" in tag_links(node)
+    assert "Project A|Nested moved|Archive/Project|1" in tag_links(node)
     note_tags, _, _ = api(node, "GET", f"note/{renamed['id']}/tags")
     assert len(note_tags["tags"]) == 2
 
@@ -523,7 +523,7 @@ def test_tags(node, label):
     tags, _, _ = api(node, "GET", "tags")
     work = next(t for t in tags["tags"] if t["name"] == "Work")
     api(node, "DELETE", f"tags/{work['id']}", headers={"If-Match": f'"{tags["etag"]}"'})
-    assert tag_links(node) == ["Important|Renamed note.md|Work|0"]
+    assert tag_links(node) == ["Important|Renamed note|Work|0"]
     assert sqlite(node, "SELECT COUNT(*) FROM tag") == "1"
 
     # A notes.sqlite with an unknown newer schema is only read
@@ -546,26 +546,42 @@ def ocs(node, path, expect=200):
 
 
 def test_desktop_database_fixture(node, label):
+    for fixture, version, title, category, paths in [
+        ("qownnotes-desktop-fixture.sqlite", 16, "Meeting", "Work/Notes", [["Work", "Project"]]),
+        ("qownnotes-desktop-15-fixture.sqlite", 15, "Meeting", "Work/Notes", [["Work", "Project"]]),
+        ("qownnotes-android-fixture.sqlite", 16, "Android meeting", "Archive/Notes", [["Work", "Project"], ["Work", "Android child"]]),
+    ]:
+        test_client_database_fixture(node, fixture, version, title, category, paths)
+
+
+def test_client_database_fixture(node, fixture, version, title, category, paths):
     """A real Desktop schema, uploaded and downloaded through WebDAV, with synthetic rows."""
     api(node, "PUT", "settings", {"notesPath": "DesktopFixture"})
     try:
-        api(node, "POST", "notes", {"title": "Meeting", "category": "Work/Notes"})
-        node.succeed(f"curl -fsS -u {AUTH} -T /etc/qownnotes-desktop-fixture.sqlite {BASE_URL}/remote.php/dav/files/admin/DesktopFixture/notes.sqlite")
+        meeting, _, _ = api(node, "POST", "notes", {"title": title, "category": category})
+        node.succeed(f"curl -fsS -u {AUTH} -T /etc/{fixture} {BASE_URL}/remote.php/dav/files/admin/DesktopFixture/notes.sqlite")
         tags, _, _ = api(node, "GET", "tags")
-        assert tags["schemaVersion"] == 16 and tags["writable"] is True
+        assert tags["schemaVersion"] == version and tags["writable"] is True
         work = next(t for t in tags["tags"] if t["name"] == "Work")
         assert work["color"] == "#ff8800" and work["darkColor"] == "#ffaa33"
-        assert work["children"][0]["name"] == "Project"
-        moved, _, _ = api(node, "PATCH", "subfolders", {"path": "Work", "newPath": "Archive"})
+        assert any(child["name"] == "Project" for child in work["children"])
+        note_tags, _, _ = api(node, "GET", f"note/{meeting['id']}/tags")
+        assert sorted(tag["path"] for tag in note_tags["tags"]) == sorted(paths)
+        links, _, _ = api(node, "GET", "tag-links")
+        assert next(link for link in links["links"] if link["fileName"] == title)["noteId"] == meeting["id"]
+        old_folder = category.split("/")[0]
+        target_folder = "Roundtrip" + str(meeting["id"])
+        moved, _, _ = api(node, "PATCH", "subfolders", {"path": old_folder, "newPath": target_folder})
         assert moved["tagsRelinked"] is True
         node.succeed(f"curl -fsS -u {AUTH} -o /tmp/desktop-roundtrip.sqlite {BASE_URL}/remote.php/dav/files/admin/DesktopFixture/notes.sqlite")
         schema_query = "SELECT type, name, sql FROM sqlite_master ORDER BY type, name"
-        before = node.succeed(f"sqlite3 /etc/qownnotes-desktop-fixture.sqlite {shlex.quote(schema_query)}")
+        before = node.succeed(f"sqlite3 /etc/{fixture} {shlex.quote(schema_query)}")
         after = node.succeed(f"sqlite3 /tmp/desktop-roundtrip.sqlite {shlex.quote(schema_query)}")
         assert before == after, "Desktop schema must remain untouched"
         assert node.succeed("sqlite3 /tmp/desktop-roundtrip.sqlite 'PRAGMA quick_check'").strip() == "ok"
         assert node.succeed("sqlite3 /tmp/desktop-roundtrip.sqlite \"SELECT file_name,file_size FROM trashItem\"").strip() == "Deleted.md|42"
-        assert node.succeed("sqlite3 /tmp/desktop-roundtrip.sqlite \"SELECT note_sub_folder_path FROM noteTagLink WHERE note_file_name='Meeting.md'\"").strip() == "Archive/Notes"
+        query = f"SELECT DISTINCT note_sub_folder_path FROM noteTagLink WHERE note_file_name='{title}'"
+        assert node.succeed(f"sqlite3 /tmp/desktop-roundtrip.sqlite {shlex.quote(query)}").strip() == f"{target_folder}/Notes"
         assert node.succeed("od -An -tu1 -j18 -N2 /tmp/desktop-roundtrip.sqlite").split() == ["1", "1"]
     finally:
         api(node, "PUT", "settings", {"notesPath": "Notes"})
@@ -592,7 +608,7 @@ def test_note_history(node, label):
     # A deleted note keeps its tags when it is restored
     api(node, "PUT", f"note/{note['id']}/tags", {"tagPaths": [["History tag"]]})
     api(node, "DELETE", f"notes/{note['id']}", headers={"X-QOwnNotes-Relink-Tags": "1"})
-    assert "History tag|History.md|Hist|1" in tag_links(node)
+    assert "History tag|History|Hist|1" in tag_links(node)
 
     trash, _, _ = api(node, "GET", "trash")
     trashed = next(n for n in trash["notes"] if n["originalLocation"] == "Notes/Hist/History.md")
@@ -603,7 +619,7 @@ def test_note_history(node, label):
     api(node, "POST", "trash/restore", {"originalLocation": "Other/History.md", "deleted": trashed["deleted"]}, expect=400)
     restored, _, _ = api(node, "POST", "trash/restore", {"originalLocation": trashed["originalLocation"], "deleted": trashed["deleted"]}, headers={"X-QOwnNotes-Relink-Tags": "1"})
     assert restored["id"] is not None
-    assert "History tag|History.md|Hist|0" in tag_links(node)
+    assert "History tag|History|Hist|0" in tag_links(node)
     note_tags, _, _ = api(node, "GET", f"note/{restored['id']}/tags")
     assert [tag["path"] for tag in note_tags["tags"]] == [["History tag"]]
     api(node, "POST", "trash/restore", {"originalLocation": trashed["originalLocation"], "deleted": trashed["deleted"]}, expect=404)

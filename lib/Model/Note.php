@@ -38,7 +38,7 @@ class Note {
 	}
 
 	/**
-	 * File name including the suffix, e.g. "Meeting.md" (the "note_file_name" in notes.sqlite)
+	 * File name including the suffix, e.g. "Meeting.md" (not the tag database's base name)
 	 */
 	public function getFileName(): string {
 		return $this->file->getName();

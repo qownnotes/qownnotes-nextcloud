@@ -1,0 +1,15 @@
+{
+  "clientRepository": "https://github.com/qownnotes/qownnotes-android",
+  "clientCommit": "5380645",
+  "test": "org.qownnotes.mobile.notefolder.ClientCompatibilityCaptureTest",
+  "device": "qownnotes-api36 x86_64 emulator, Android 16 (API 36)",
+  "captureArgument": "captureTagFixture=true",
+  "input": "desktop-16-seeded.sqlite",
+  "operations": [
+    "link Meeting in Work/Notes to Work/Android child",
+    "relink Meeting to Android meeting in Archive/Notes"
+  ],
+  "fixtures": {
+    "android-16.sqlite": "0510b1b2d79141fc2fd84bafa1e3171df26a64a0cb65452b5f21f98261008eca"
+  }
+}

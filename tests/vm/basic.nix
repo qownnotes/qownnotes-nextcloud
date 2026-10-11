@@ -82,6 +82,8 @@ let
           "nextcloud-adminpass".text = "adminpass";
           "qownnotes-tag-concurrency.py".source = ./tag_concurrency.py;
           "qownnotes-desktop-fixture.sqlite".source = ../fixtures/notes-sqlite/desktop-16-seeded.sqlite;
+          "qownnotes-desktop-15-fixture.sqlite".source = ../fixtures/notes-sqlite/desktop-15-seeded.sqlite;
+          "qownnotes-android-fixture.sqlite".source = ../fixtures/notes-sqlite/android-16.sqlite;
         };
         # For verifying notes.sqlite files written by the app
         systemPackages = [

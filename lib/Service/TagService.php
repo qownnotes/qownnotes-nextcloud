@@ -55,7 +55,8 @@ class TagService {
 		$snapshot = $this->getSnapshot($userId);
 		$noteIds = [];
 		foreach ($this->notes->getAll($userId) as $note) {
-			$noteIds[$note->getSubFolderPath() . "\0" . $note->getFileName()] = $note->getId();
+			$key = $note->getSubFolderPath() . "\0" . $note->getTitle();
+			$noteIds[$key] = min($noteIds[$key] ?? $note->getId(), $note->getId());
 		}
 
 		$links = [];
@@ -241,9 +242,16 @@ class TagService {
 	 * @param callable(TagWriter): void $modify
 	 */
 	private function modify(string $userId, callable $modify, ?string $ifMatch): TagSnapshot {
+		$locations = array_map(NoteLocation::fromNote(...), $this->notes->getAll($userId));
 		return $this->database->modify(
 			$this->folders->getNotesFolder($userId),
-			$modify,
+			static function (TagWriter $writer) use ($modify, $locations): void {
+				$before = $writer->getTotalChanges();
+				$modify($writer);
+				if ($writer->getTotalChanges() > $before) {
+					$writer->reconcileLinks($locations);
+				}
+			},
 			$ifMatch,
 			$this->settings->isCreateTagDatabase($userId),
 		);
@@ -265,7 +273,14 @@ class TagService {
 				return true;
 			}
 
-			$this->database->modify($notesFolder, $modify, null, false);
+			$locations = array_map(NoteLocation::fromNote(...), $this->notes->getAll($userId));
+			$this->database->modify($notesFolder, static function (TagWriter $writer) use ($modify, $locations): void {
+				$before = $writer->getTotalChanges();
+				$modify($writer);
+				if ($writer->getTotalChanges() > $before) {
+					$writer->reconcileLinks($locations);
+				}
+			}, null, false);
 			return true;
 		} catch (Throwable $e) {
 			$this->logger->warning('Tags in notes.sqlite could not be updated', ['exception' => $e]);

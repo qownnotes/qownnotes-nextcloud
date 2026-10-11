@@ -1,0 +1,10 @@
+{
+  "desktopVersion": "26.5.10",
+  "desktopDownload": "https://github.com/pbek/QOwnNotes/releases/download/v26.5.10/QOwnNotes-x86_64.AppImage",
+  "desktopAppImageSha256": "bb83a188ffec4efed503cafd493d84cbe88f4683d2edb8dc80a513b8ea383714",
+  "runner": "appimage-run; isolated offscreen capture with --schema-version 15",
+  "fixtures": {
+    "desktop-15-empty.sqlite": "6f24dfe0a8e4df59df96618d76ee5be5037c96ecc0843384ca293a19cdec3520",
+    "desktop-15-seeded.sqlite": "d08cfd60601ddd91b93ea723031a7d46cdb92a9587743f514482c1ac96af38bd"
+  }
+}

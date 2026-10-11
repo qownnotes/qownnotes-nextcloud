@@ -219,7 +219,7 @@ All links, for clients that sync the tags completely:
     {
       "tagId": 2,
       "noteId": 1234,
-      "fileName": "Meeting.md",
+      "fileName": "Meeting",
       "subFolderPath": "Work",
       "stale": false
     }
@@ -228,6 +228,10 @@ All links, for clients that sync the tags completely:
 ```
 
 `noteId` is `null` if the note doesn't exist (anymore). `stale` links belong to notes that were deleted or are missing; QOwnNotes deletes them after 10 days.
+
+Here `fileName` is the Desktop tag key: the base name **without** its suffix. For same-base files
+with different suffixes in one folder, tags are shared and `noteId` is the lowest matching file ID.
+Actual filenames in the trash and note-info responses still include the suffix.
 
 ### Note details, versions and trash
 

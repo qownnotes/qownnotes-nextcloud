@@ -20,7 +20,7 @@ The clients choose the server app by the capabilities of the server:
 
 The new app doesn't publish the `notes` capability, so it never gets in the way of the Notes app and its clients.
 
-Client discovery support and the first app store release are still release blockers. The table describes the intended behavior of updated clients, not a claim that those client releases have shipped. Keep the existing apps installed until your client release explicitly supports the `qownnotes` capability.
+Discovery support is implemented in Android commit `5380645` (including per-account paths, checkpoint invalidation and attachment routing) and Desktop commit `a921b7819` (asynchronous discovery with legacy fallback). Real-server client acceptance, client releases and the first app store release remain release blockers. The table is not a claim that those client releases have shipped. Keep the existing apps installed until your client release explicitly supports the `qownnotes` capability.
 
 ## For administrators
 

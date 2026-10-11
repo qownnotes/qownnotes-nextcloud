@@ -143,7 +143,8 @@ class TagDatabaseTest extends TestCase {
 	}
 
 	public function testRealDesktopSchemaCanBeReadAndModifiedWithoutMigration(): void {
-		foreach (['desktop-16-empty.sqlite', 'desktop-16-seeded.sqlite'] as $fixture) {
+		foreach (['desktop-15-empty.sqlite', 'desktop-15-seeded.sqlite', 'desktop-16-empty.sqlite', 'desktop-16-seeded.sqlite', 'android-16.sqlite'] as $fixture) {
+			$version = str_contains($fixture, '-15-') ? 15 : 16;
 			copy(__DIR__ . '/../../fixtures/notes-sqlite/' . $fixture, $this->storedPath);
 			$pdo = new PDO('sqlite:' . $this->storedPath);
 			$schema = $pdo->query('SELECT type, name, sql FROM sqlite_master ORDER BY type, name')->fetchAll(PDO::FETCH_ASSOC);
@@ -154,7 +155,7 @@ class TagDatabaseTest extends TestCase {
 
 			$database = $this->createDatabase();
 			$before = $database->read($this->createFolder());
-			$this->assertSame(16, $before->schemaVersion);
+			$this->assertSame($version, $before->schemaVersion);
 			$this->assertTrue($before->writable);
 			$after = $database->modify($this->createFolder(), static function (TagWriter $writer): void {
 				$ids = $writer->resolvePath(['work', 'Server child'], true);
@@ -175,7 +176,7 @@ class TagDatabaseTest extends TestCase {
 			$this->assertSame($trash, $pdo->query('SELECT * FROM trashItem')->fetchAll(PDO::FETCH_ASSOC));
 			$this->assertSame($pageSize, $pdo->query('PRAGMA page_size')->fetchColumn());
 			$this->assertSame($encoding, $pdo->query('PRAGMA encoding')->fetchColumn());
-			$this->assertSame('16', $pdo->query("SELECT value FROM appData WHERE name='database_version'")->fetchColumn());
+			$this->assertSame((string)$version, $pdo->query("SELECT value FROM appData WHERE name='database_version'")->fetchColumn());
 			$this->assertSame('ok', $pdo->query('PRAGMA quick_check')->fetchColumn());
 			$this->assertSame("\x01\x01", substr((string)file_get_contents($this->storedPath), 18, 2));
 			unset($pdo);

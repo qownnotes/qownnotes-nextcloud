@@ -160,4 +160,30 @@ class TagWriterTest extends TestCase {
 		$this->expectException(InvalidInputException::class);
 		$this->writer->createTag('Tag', 0, 0, 'red');
 	}
+
+	public function testDuplicateLinkDoesNotTouchRows(): void {
+		$tag = $this->writer->createTag('Tag', 0);
+		$note = new NoteLocation('Meeting', '');
+		$this->writer->linkNote($tag, $note);
+		$before = $this->writer->getTotalChanges();
+		$this->writer->linkNote($tag, $note);
+		$this->assertSame($before, $this->writer->getTotalChanges());
+	}
+
+	public function testBrokenLinkLifecycleRevivesMarksAndPurges(): void {
+		$tag = $this->writer->createTag('Tag', 0);
+		foreach (['Present', 'Missing', 'Expired', 'Returned'] as $name) {
+			$this->writer->linkNote($tag, new NoteLocation($name, 'Work'));
+		}
+		$this->pdo->exec("UPDATE noteTagLink SET stale_date = '2000-01-01T00:00:00.000' WHERE note_file_name IN ('Expired', 'Returned')");
+		$this->writer->reconcileLinks([new NoteLocation('Present', 'Work'), new NoteLocation('Returned', 'Work')]);
+		$this->assertSame([
+			['Tag', 'Missing', 'Work', true],
+			['Tag', 'Present', 'Work', false],
+			['Tag', 'Returned', 'Work', false],
+		], $this->links());
+		$before = $this->writer->getTotalChanges();
+		$this->writer->reconcileLinks([new NoteLocation('Present', 'Work'), new NoteLocation('Returned', 'Work')]);
+		$this->assertSame($before, $this->writer->getTotalChanges());
+	}
 }

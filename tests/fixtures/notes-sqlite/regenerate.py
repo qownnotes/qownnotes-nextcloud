@@ -15,10 +15,10 @@ import tempfile
 import time
 
 
-def validate(path):
+def validate(path, schema_version=16):
     with sqlite3.connect(path) as db:
         assert db.execute("PRAGMA quick_check").fetchone() == ("ok",)
-        assert db.execute("SELECT value FROM appData WHERE name='database_version'").fetchone() == ("16",)
+        assert db.execute("SELECT value FROM appData WHERE name='database_version'").fetchone() == (str(schema_version),)
         assert db.execute("SELECT count(*) FROM tag").fetchone() == (0,)
     assert path.read_bytes()[18:20] == b"\x01\x01"
 
@@ -27,11 +27,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--desktop", default="QOwnNotes", help="Pinned Desktop executable")
     parser.add_argument("--expected-version", default="26.10.2")
+    parser.add_argument("--schema-version", type=int, choices=[15, 16], default=16)
     parser.add_argument("--output", type=Path, default=Path(__file__).parent)
     args = parser.parse_args()
     executable = Path(shutil.which(args.desktop) or args.desktop).resolve(strict=True)
     version = subprocess.check_output([str(executable), "--version"], text=True).strip()
-    if version != f"QOwnNotes {args.expected_version}":
+    if version.splitlines()[-1] != f"QOwnNotes {args.expected_version}":
         parser.error(f"Expected QOwnNotes {args.expected_version}, got {version}")
     args.output.mkdir(parents=True, exist_ok=True)
 
@@ -63,7 +64,7 @@ def main():
                 while time.monotonic() < deadline:
                     if database.exists():
                         try:
-                            validate(database)
+                            validate(database, args.schema_version)
                             digest = hashlib.sha256(database.read_bytes()).hexdigest()
                             if digest == previous:
                                 break
@@ -74,7 +75,7 @@ def main():
                         raise RuntimeError(f"Desktop exited before creating a stable database: {process.returncode}")
                     time.sleep(1)
                 else:
-                    raise RuntimeError("Desktop did not create a valid, stable schema-16 database within 60 seconds")
+                    raise RuntimeError(f"Desktop did not create a valid, stable schema-{args.schema_version} database within 60 seconds")
             finally:
                 if process.poll() is None:
                     process.terminate()
@@ -83,12 +84,12 @@ def main():
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait()
-            validate(database)
+            validate(database, args.schema_version)
             assert not Path(str(database) + "-journal").exists()
-            shutil.copyfile(database, args.output / "desktop-16-empty.sqlite")
+            shutil.copyfile(database, args.output / f"desktop-{args.schema_version}-empty.sqlite")
 
-    populated = args.output / "desktop-16-seeded.sqlite"
-    shutil.copyfile(args.output / "desktop-16-empty.sqlite", populated)
+    populated = args.output / f"desktop-{args.schema_version}-seeded.sqlite"
+    shutil.copyfile(args.output / f"desktop-{args.schema_version}-empty.sqlite", populated)
     with sqlite3.connect(populated) as db:
         db.executemany(
             "INSERT INTO tag (id,name,parent_id,color,dark_color,created,updated) VALUES (?,?,?,?,?,'2026-01-01 00:00:00','2026-01-01 00:00:00')",
@@ -96,7 +97,7 @@ def main():
         )
         db.executemany(
             "INSERT INTO noteTagLink (tag_id,note_file_name,note_sub_folder_path,created,stale_date) VALUES (?,?,?,'2026-01-01 00:00:00',?)",
-            [(2, "Meeting.md", "Work/Notes", None), (3, "Groceries.txt", "", None), (1, "Missing.md", "", "2026-01-01 00:00:00")],
+            [(2, "Meeting", "Work/Notes", None), (3, "Groceries", "", None), (1, "Missing", "", "2026-01-01 00:00:00")],
         )
         db.execute("INSERT INTO trashItem (file_name,file_size,created) VALUES ('Deleted.md',42,'2026-01-01 00:00:00')")
 

@@ -7,9 +7,11 @@ QOwnNotes stores the tags of a note folder in the SQLite database `notes.sqlite`
 The server only uses the tables `appData`, `tag` and `noteTagLink` of the QOwnNotes Desktop schema (version 16):
 
 - `tag`: `id`, `name` (unique per parent, case-insensitive), `parent_id` (`0` for top level tags), `priority`, `color`, `dark_color`, `created`, `updated`.
-- `noteTagLink`: `tag_id`, `note_file_name` (file name with suffix, e.g. `Meeting.md`), `note_sub_folder_path` (`/`-separated, `""` for the root), `created`, `stale_date`.
+- `noteTagLink`: `tag_id`, `note_file_name` (base name **without** suffix, e.g. `Meeting` for `Meeting.md`), `note_sub_folder_path` (`/`-separated, `""` for the root), `created`, `stale_date`.
 
 Notes are identified by their file name and subfolder path only. There are no IDs shared with the files, so the links have to be updated whenever a note is renamed or moved.
+
+The misleading `note_file_name` column follows Desktop's `Note::getName()` and Android's `NoteTagKey`, not the actual filename. Same-base files with different suffixes in one folder share their tags; `tag-links.noteId` uses the lowest matching file ID as a deterministic representative.
 
 ## Behavior
 
@@ -55,4 +57,4 @@ When QOwnNotes Desktop changes the schema, the writable versions of this app (`T
 
 ## Compatibility checks
 
-[`tests/fixtures/notes-sqlite/`](../tests/fixtures/notes-sqlite/README.md) contains a real database created by QOwnNotes Desktop 26.10.2 and clearly labeled synthetic data/negative variants. PHP tests and VM WebDAV round trips verify that server writes preserve the Desktop schema, page size, encoding and trash data. Parallel VM API/API and API/WebDAV writes using the same file ETag verify that only one succeeds, with no lost or partial batch changes. Genuine schema-15 and Android-written captures and recorded client requests remain follow-up validation.
+[`tests/fixtures/notes-sqlite/`](../tests/fixtures/notes-sqlite/README.md) contains genuine Desktop schema-15 (26.5.10) and schema-16 (26.10.2) databases and a schema-16 database modified by the production Android writer on the API 36 emulator. Test rows and negative variants are explicitly synthetic. PHP tests and VM WebDAV round trips verify that server writes preserve the client schema, page size, encoding and trash data. Parallel VM API/API and API/WebDAV writes using the same file ETag verify that only one succeeds, with no lost or partial batch changes. Recorded client requests and real-server client sync remain follow-up validation.

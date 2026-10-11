@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace OCA\QOwnNotes\Model;
 
 /**
- * Identifies a note the way notes.sqlite does: by file name and subfolder path
+ * Identifies a note the way notes.sqlite does: by base name (without suffix) and subfolder path
  */
 class NoteLocation {
 	public function __construct(
@@ -20,7 +20,7 @@ class NoteLocation {
 	}
 
 	public static function fromNote(Note $note): self {
-		return new self($note->getFileName(), $note->getSubFolderPath());
+		return new self($note->getTitle(), $note->getSubFolderPath());
 	}
 
 	public function equals(self $other): bool {

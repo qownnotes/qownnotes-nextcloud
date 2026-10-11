@@ -67,7 +67,7 @@ class NotesSearchProvider implements IProvider {
 		$tagPaths = $this->getTagPaths($userId);
 
 		$matches = array_filter($notes, static function (Note $note) use ($words, $tagPaths): bool {
-			$key = $note->getSubFolderPath() . "\0" . $note->getFileName();
+			$key = $note->getSubFolderPath() . "\0" . $note->getTitle();
 			return self::matches($words, $note->getTitle(), $note->getContent(), $tagPaths[$key] ?? []);
 		});
 		usort($matches, static fn (Note $a, Note $b): int => $b->getModified() <=> $a->getModified());
@@ -77,7 +77,7 @@ class NotesSearchProvider implements IProvider {
 		$iconUrl = $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('core', 'filetypes/text.svg'));
 
 		$entries = array_map(function (Note $note) use ($tagPaths, $iconUrl): SearchResultEntry {
-			$key = $note->getSubFolderPath() . "\0" . $note->getFileName();
+			$key = $note->getSubFolderPath() . "\0" . $note->getTitle();
 			$details = array_map(static fn (string $path): string => '#' . $path, $tagPaths[$key] ?? []);
 			if ($note->getSubFolderPath() !== '') {
 				array_unshift($details, $note->getSubFolderPath());
