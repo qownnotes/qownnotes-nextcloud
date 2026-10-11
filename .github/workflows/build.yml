@@ -1,0 +1,82 @@
+name: "📦 Build application"
+
+on:
+  push:
+    branches-ignore:
+      - release
+    tags-ignore:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "📦 Build deployable app"
+    if: github.ref_type == 'branch' && github.ref != 'refs/heads/release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v5
+
+      - name: "⚙️ Set up Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: "🔧 Build frontend"
+        run: |
+          npm ci
+          npm run build
+
+      - name: "📦 Package app"
+        run: |
+          python3 -m unittest discover -s tests/release
+          sh scripts/package-app.sh
+
+      - name: "📤 Upload deployable artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: qownnotes-${{ github.sha }}
+          path: |
+            build/qownnotes-continuous.tar.gz
+            build/qownnotes-continuous.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  continuous-release:
+    name: "🚀 Publish continuous pre-release"
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: "📥 Download deployable artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          name: qownnotes-${{ github.sha }}
+          path: build
+
+      - name: "🚀 Update continuous pre-release"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          cd build
+          sha256sum --check qownnotes-continuous.tar.gz.sha256
+          printf 'Unsigned development build from main commit %s.\n\nExtract the archive into the Nextcloud custom_apps directory as qownnotes. This build is for testing, not the Nextcloud app store.\n' "$COMMIT" > release-notes.md
+          if gh release view continuous >/dev/null 2>&1; then
+            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/continuous" -f sha="$COMMIT" -F force=true
+            gh release edit continuous --title "Continuous build" --notes-file release-notes.md --prerelease --latest=false
+          else
+            gh release create continuous --target "$COMMIT" --title "Continuous build" --notes-file release-notes.md --prerelease --latest=false
+          fi
+          gh release upload continuous qownnotes-continuous.tar.gz qownnotes-continuous.tar.gz.sha256 --clobber

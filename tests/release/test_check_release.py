@@ -5,6 +5,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -174,6 +175,48 @@ class ReleaseCheckTest(unittest.TestCase):
         (self.root / "docs/screenshots/editor.png").unlink()
         with self.assertRaisesRegex(ValueError, "screenshot"):
             MODULE.check_release(self.root)
+
+    def test_package_contains_only_unsigned_runtime_files(self):
+        (self.root / "appinfo/signature.json").write_text("stale signature")
+        (self.root / "lib/runtime.php").write_text("runtime")
+        (self.root / "lib/.hidden").write_text("excluded")
+        result = subprocess.run(
+            ["sh", str(SCRIPT.with_name("package-app.sh")), str(self.root)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        archive = self.root / "build/qownnotes-continuous.tar.gz"
+        with tarfile.open(archive) as package:
+            names = package.getnames()
+            self.assertIn("qownnotes/appinfo/info.xml", names)
+            self.assertIn("qownnotes/lib/runtime.php", names)
+            self.assertIn("qownnotes/js/qownnotes-main.mjs", names)
+            self.assertIn("qownnotes/js/qownnotes-files.mjs", names)
+            self.assertNotIn("qownnotes/appinfo/signature.json", names)
+            self.assertNotIn("qownnotes/lib/.hidden", names)
+            self.assertNotIn("qownnotes/package.json", names)
+            self.assertTrue(all(name.startswith("qownnotes") for name in names))
+            self.assertTrue(all(member.uid == member.gid == 0 for member in package))
+        subprocess.run(
+            ["sha256sum", "--check", archive.name + ".sha256"],
+            cwd=archive.parent,
+            capture_output=True,
+            check=True,
+        )
+
+    def test_package_fails_without_frontend(self):
+        (self.root / "js/qownnotes-main.mjs").unlink()
+        result = subprocess.run(
+            ["sh", str(SCRIPT.with_name("package-app.sh")), str(self.root)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Missing frontend entry point", result.stderr)
+        self.assertFalse((self.root / "build").exists())
 
 
 if __name__ == "__main__":

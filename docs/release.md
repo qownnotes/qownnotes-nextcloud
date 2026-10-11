@@ -32,6 +32,16 @@ The app uses CalVer versions (`YY.M.patch`, e.g. `26.10.0`).
 5. Attach the archive to the draft release and publish it.
 6. Upload the release in the [app store](https://apps.nextcloud.com/developer/apps/releases/new) with the download URL of the archive (`https://github.com/qownnotes/qownnotes-nextcloud/releases/download/v<version>/qownnotes-<version>.tar.gz`) and the signature.
 
+## Continuous builds
+
+The `build.yml` workflow builds the frontend on pushes to every branch except `release` (not tags), and can also be run manually on those branches. It packages only the runtime files in `release-files.txt`, with the built frontend and without any existing app signature.
+
+Each run uploads `qownnotes-continuous.tar.gz` and its SHA-256 checksum as a `qownnotes-<commit>` workflow artifact, retained for 14 days. The archive contains a top-level `qownnotes/` folder ready to extract into Nextcloud's `custom_apps/` directory. To package locally after `npm ci && npm run build`, run `sh scripts/package-app.sh`.
+
+On `main` only, a dependent job downloads that exact artifact (without rebuilding), verifies its checksum and publishes it to the rolling GitHub pre-release tagged `continuous`. The tag moves to the built commit and the assets are replaced on each successful run. It is not marked as the latest stable release.
+
+These development builds are **unsigned**, intended for testing, and may produce a Nextcloud integrity warning. They are not suitable for app store publication. The signed `release` branch process above is unchanged; no signing credentials are needed by this workflow.
+
 ## First-release checklist
 
 - [x] App store metadata, screenshots, release manifest, signing script and draft-release workflow are in the repository.
