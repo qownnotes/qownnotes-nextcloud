@@ -25,3 +25,6 @@ devenv.local.nix
 # Playwright
 tests/e2e/test-results
 tests/e2e/playwright-report
+
+# Python tooling
+__pycache__/

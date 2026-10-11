@@ -16,8 +16,8 @@ The app uses CalVer versions (`YY.M.patch`, e.g. `26.10.0`).
 
 ## Release
 
-1. Set the version in `appinfo/info.xml` and `package.json`, and add the release notes to `CHANGELOG.md` under `## <version>`.
-2. Make sure CI is green (format check and VM test).
+1. Set the version in `appinfo/info.xml`, `package.json` and both root version fields in `package-lock.json`, and add the release notes to `CHANGELOG.md` under `## <version>`.
+2. Run `just release-check` and make sure CI is green (format check and VM test). The check validates CalVer, matching versions, nonempty release notes, manifest inputs and repository-backed app store screenshots. It runs without certificates, Docker or a frontend build. `just sign-app` additionally checks the built frontend before signing; the draft-release workflow uses the same checker to extract the release notes.
 3. Push the commit to the `release` branch. The workflow `create_release.yml` creates a draft GitHub release `v<version>` with the release notes.
 4. Create the signed release archive. This builds the frontend and signs the app in the docker container of the dev environment (create it with `cd docker && just up` first):
 
@@ -27,5 +27,18 @@ The app uses CalVer versions (`YY.M.patch`, e.g. `26.10.0`).
 
    The archive only contains the files listed in [`release-files.txt`](../release-files.txt). It is stored as `build/qownnotes-<version>.tar.gz`, its signature for the app store as `build/qownnotes-<version>.tar.gz.sig`.
 
+   Every manifest entry must exist. Styles are part of the frontend bundle in `js/`; add `l10n` to the manifest when generated translations are introduced (there are none yet).
+
 5. Attach the archive to the draft release and publish it.
 6. Upload the release in the [app store](https://apps.nextcloud.com/developer/apps/releases/new) with the download URL of the archive (`https://github.com/qownnotes/qownnotes-nextcloud/releases/download/v<version>/qownnotes-<version>.tar.gz`) and the signature.
+
+## First-release checklist
+
+- [x] App store metadata, screenshots, release manifest, signing script and draft-release workflow are in the repository.
+- [x] Local release preflight and its regression tests are shared with CI.
+- [ ] Obtain the app-specific `qownnotes` certificate and register the app. A certificate for another app ID cannot be reused.
+- [ ] Verify the signed archive with Nextcloud, upload it to a GitHub release and publish it in the app store.
+- [ ] Ship Desktop and Android capability-discovery changes with legacy fallback (see [the plan](plan.md#10-client-changes-and-migration)); record the first supported client versions in the migration guide.
+- [ ] Capture the remaining genuine schema-15 and Android-written databases and perform the manual client sync checks described in the plan.
+
+The preflight does not claim that signing, app store publication or client acceptance testing has succeeded. Those require external credentials or client runtimes and are separate release gates.

@@ -20,9 +20,11 @@ The clients choose the server app by the capabilities of the server:
 
 The new app doesn't publish the `notes` capability, so it never gets in the way of the Notes app and its clients.
 
+Client discovery support and the first app store release are still release blockers. The table describes the intended behavior of updated clients, not a claim that those client releases have shipped. Keep the existing apps installed until your client release explicitly supports the `qownnotes` capability.
+
 ## For administrators
 
-1. Install **QOwnNotes** from the app store (category "Office"), or with `occ app:install qownnotes`.
+1. Until the first app store release, use the [git installation](../README.md#from-the-git-repository). Once published, install **QOwnNotes** from the app store (category "Office"), or with `occ app:install qownnotes`.
 2. Keep the **Notes** and **QOwnNotesAPI** apps installed until all users have updated their QOwnNotes clients. All three apps can be installed at the same time; they share no database tables or routes.
 3. Optional: if you only want to provide the sync APIs, for example because your users use the Nextcloud Notes web interface, disable the web interface in the admin settings (section "QOwnNotes") or with `occ config:app:set qownnotes ui_enabled --value=no`.
 4. Optional: install the PHP extension `pdo_sqlite` if it is missing. It is needed for tags; the admin settings show a hint if it is not available.

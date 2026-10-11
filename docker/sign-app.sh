@@ -20,10 +20,12 @@ for file in "${CERT_DIR}/${APP_NAME}.key" "${CERT_DIR}/${APP_NAME}.crt"; do
   fi
 done
 
-if [ ! -f "${APP_SOURCE}/js/${APP_NAME}-main.mjs" ]; then
-  echo "❌ The frontend is not built, run \`npm ci && npm run build\` first" >&2
-  exit 1
-fi
+for entry in main files; do
+  if [ ! -f "${APP_SOURCE}/js/${APP_NAME}-${entry}.mjs" ]; then
+    echo "❌ The frontend entry ${entry} is not built, run \`npm ci && npm run build\` first" >&2
+    exit 1
+  fi
+done
 
 VERSION=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "${APP_SOURCE}/appinfo/info.xml" | head -n 1)
 WORK_DIR=$(mktemp -d)
@@ -41,6 +43,9 @@ while IFS= read -r file; do
   esac
   if [ -e "${file}" ]; then
     sources="${sources} ${file}"
+  else
+    echo "❌ Release input ${file} is missing" >&2
+    exit 1
   fi
 done <release-files.txt
 # shellcheck disable=SC2086 # the list of sources must be split

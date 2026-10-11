@@ -36,5 +36,6 @@
   - Rejected `notes.sqlite` copies are cleaned up, and the 50 MiB limit is enforced even with stale storage metadata
   - Tag compatibility tests use a real Desktop schema-16 database; VM tests exercise parallel API and WebDAV writes
   - Tag responses respect read-only shares even when permissions change without a new database ETag
+  - Release preflight checks versions, release notes, packaging inputs and app store screenshots locally and in CI; signing rejects missing inputs
   - Documentation of the APIs (`docs/api/`), the handling of `notes.sqlite` and a migration guide for
     users of the QOwnNotesAPI and Nextcloud Notes apps

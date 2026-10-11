@@ -91,7 +91,14 @@ lint-php:
 # Build the frontend and create the signed release archive in build/ (see docs/release.md)
 [group('release')]
 sign-app: build-js
+    python3 scripts/check-release.py --built
     cd docker && just sign-app
+
+# Check release metadata and packaging inputs without signing or publishing
+[group('release')]
+release-check:
+    python3 -m unittest discover -s tests/release
+    python3 scripts/check-release.py
 
 # Run the code format checker in CI
 [group('ci')]
@@ -100,6 +107,7 @@ ci-format-check:
     npm ci
     just format
     just lint-js
+    just release-check
 
 # Interactive NixOS test driver session for the combined Nextcloud versions.
 # Tries driverInteractive first (non-executing build), then falls back to driver (also non-executing) if needed.

@@ -22,7 +22,7 @@ Requirements: Nextcloud 32 to 35, PHP 8.2 to 8.5, and the PHP extension `pdo_sql
 
 ## Installation
 
-Install **QOwnNotes** from the Nextcloud app store (category "Office"), or with:
+The first app store release is still pending. For now, use the [git installation](#from-the-git-repository). Once published, install **QOwnNotes** from the Nextcloud app store (category "Office"), or with:
 
 ```bash
 occ app:install qownnotes
@@ -76,6 +76,7 @@ just lint-php          # syntax, code style, static analysis and unit tests
 just lint-js           # ESLint and JavaScript unit tests
 just vm-test-version   # NixOS VM test against a single Nextcloud version (default: 34)
 just vm-test           # NixOS VM test against all supported Nextcloud versions
+just release-check     # validate release metadata and packaging inputs (no credentials needed)
 just sign-app          # signed release archive in build/ (see docs/release.md)
 ```
 

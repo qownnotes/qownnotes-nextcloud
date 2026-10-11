@@ -1,6 +1,6 @@
 # QOwnNotes for Nextcloud: Planning Document
 
-Status: Draft
+Status: Server implementation complete; release and client acceptance gates pending
 App ID: `qownnotes` (namespace `OCA\QOwnNotes`)
 Repository: `qownnotes-nextcloud`
 
@@ -398,6 +398,8 @@ Each phase ends with green CI (format check + VM test).
 
 Progress: phases 0–7 are implemented, phase 8 is prepared: release tooling (`release-files.txt`, `docker/sign-app.sh`, `just sign-app`, `create_release.yml`, `docs/release.md`), app store metadata and screenshots, API docs in `docs/api/`, `docs/notes-sqlite.md` and `docs/migration.md`. Still open for phase 8: the app store certificate and registration, the first app store release and the client releases from section 10. Phase 7 notes: the dashboard widget is an API widget (rendered by the dashboard app), unified search also matches tag paths (`#tag` searches only tags), the reference provider is only registered with the web interface, and the Files action is added through the public `BeforeTemplateRenderedEvent` and registered for both file action APIs (`@nextcloud/files` 3 for Nextcloud 32, 4 for 33+).
 
+Release preflight is implemented as `just release-check`, with regression tests and shared validation in the draft-release workflow. It checks CalVer, all package version fields, release notes, required manifest inputs, symlinks and app store screenshot paths. Signing additionally requires the built frontend and fails on missing manifest inputs rather than silently omitting them. See the [first-release checklist](release.md#first-release-checklist) for external gates. “Implemented” does not mean every phase's acceptance gate is complete: real patched-client sync checks, genuine schema-15 and Android-written captures, signed-archive verification and publication remain pending. Client contracts and synthetic fixtures are not substitutes for those checks.
+
 | Phase                                           | Scope                                                                                                                                                                                                                       | Exit criteria                                                                                                                                                                                                |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **0. Skeleton**                                 | `info.xml` (id `qownnotes`, NC 32–35), `Application` (IBootstrap), `Capabilities`, composer/npm/lint setup, docker dev env, `ui_enabled` app config key                                                                     | `just vm-test` green: app enabled, capability published, no `notes` key                                                                                                                                      |
@@ -458,20 +460,20 @@ The file is written by up to three parties: QOwnNotes Desktop (locally, synced v
 
 ## 11. Risks and Open Questions
 
-| Risk / question                                                                    | Mitigation / decision needed                                                                                    |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Clients need updates before the new app is useful                                  | Ship client changes with fallback early (they are small). Server and clients can be released independently      |
-| Concurrent edits from desktop (file sync) and web/Android                          | ETag/`If-Match` on all writes. The conflict UI in the web editor. Never auto-merge silently                     |
-| `notes.sqlite` sync conflicts with Desktop                                         | See section 9. Minimal, batched, change-only writes. No background writes                                       |
-| `notes.sqlite` schema changes in Desktop                                           | Version-gated writes (15–16). Read-only fallback. Shared compatibility table across Desktop, Android and server |
-| `pdo_sqlite` missing on some servers                                               | Tags feature degrades to unavailable and is reported in capabilities and the admin settings page                |
-| Large `notes.sqlite` files (many links)                                            | ETag-keyed parse cache, size limit, temp copy only on change                                                    |
-| WebDAV/Files renames are not relinked by the server                                | Intentional (section 4.9). Desktop and Android relink their own renames. Document this                          |
-| Notes API semantic drift vs. upstream Notes                                        | Track upstream `docs/api/v1.md`. Contract tests. Only implement versions we test                                |
-| `IVersionManager`/`ITrashManager` behavior differs between NC versions             | VM test across all supported versions. Graceful degradation (`versions_app: false`)                             |
-| `diffHtml` format expectations in Desktop                                          | Snapshot tests. Consider adding a structured diff in a future API version                                       |
-| Open: create `notes.sqlite` server-side when missing (4.9 item 4)?                 | Proposed: yes, with the exact desktop v16 schema, behind a per-user setting (default on)                        |
-| Open: rewrite relative media links when moving notes between subfolder depths?     | Proposed: yes, option default on, matching Desktop                                                              |
-| Open: should API-only mode also be selectable per user, or only by the admin?      | Proposed: admin global switch now, per-user "hide from navigation" later                                        |
-| Open: default note format for web-created notes (`# Title` vs. underlined title)?  | Proposed: `# Title`, matching QOwnNotes default                                                                 |
-| Open: minimum Nextcloud version 32 (like qownnotesapi) or 33 (like current Notes)? | Proposed: 32                                                                                                    |
+| Risk / question                                                                   | Mitigation / decision needed                                                                                    |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Clients need updates before the new app is useful                                 | Ship client changes with fallback early (they are small). Server and clients can be released independently      |
+| Concurrent edits from desktop (file sync) and web/Android                         | ETag/`If-Match` on all writes. The conflict UI in the web editor. Never auto-merge silently                     |
+| `notes.sqlite` sync conflicts with Desktop                                        | See section 9. Minimal, batched, change-only writes. No background writes                                       |
+| `notes.sqlite` schema changes in Desktop                                          | Version-gated writes (15–16). Read-only fallback. Shared compatibility table across Desktop, Android and server |
+| `pdo_sqlite` missing on some servers                                              | Tags feature degrades to unavailable and is reported in capabilities and the admin settings page                |
+| Large `notes.sqlite` files (many links)                                           | ETag-keyed parse cache, size limit, temp copy only on change                                                    |
+| WebDAV/Files renames are not relinked by the server                               | Intentional (section 4.9). Desktop and Android relink their own renames. Document this                          |
+| Notes API semantic drift vs. upstream Notes                                       | Track upstream `docs/api/v1.md`. Contract tests. Only implement versions we test                                |
+| `IVersionManager`/`ITrashManager` behavior differs between NC versions            | VM test across all supported versions. Graceful degradation (`versions_app: false`)                             |
+| `diffHtml` format expectations in Desktop                                         | Snapshot tests. Consider adding a structured diff in a future API version                                       |
+| Decision: create `notes.sqlite` server-side when missing (4.9 item 4)             | Implemented: exact desktop v16 schema, `createTagDatabase` per-user setting (default on)                        |
+| Decision: rewrite relative media links when moving notes between subfolder depths | Implemented: `rewriteMediaLinks` per-user setting (default on), opt-in header for Notes API clients             |
+| Decision: API-only mode selectable per user or only by the admin                  | Implemented: admin global switch; per-user "hide from navigation" deferred                                      |
+| Decision: default note format for web-created notes                               | Implemented: `# Title`; optional underlined title via `noteHeaderStyle`                                         |
+| Decision: minimum Nextcloud version                                               | Implemented: 32; VM coverage 32–34, 35 pending packaging                                                        |
