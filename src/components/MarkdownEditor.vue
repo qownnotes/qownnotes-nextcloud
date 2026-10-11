@@ -9,28 +9,10 @@
 
 <script>
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState } from '@codemirror/state'
 import { drawSelection, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
-import { tags } from '@lezer/highlight'
-
-// Markdown highlighting similar to QOwnNotes Desktop, with the colors of the Nextcloud theme
-const highlightStyle = HighlightStyle.define([
-	{ tag: tags.heading1, fontWeight: 'bold', fontSize: '1.6em' },
-	{ tag: tags.heading2, fontWeight: 'bold', fontSize: '1.4em' },
-	{ tag: tags.heading3, fontWeight: 'bold', fontSize: '1.2em' },
-	{ tag: [tags.heading4, tags.heading5, tags.heading6], fontWeight: 'bold' },
-	{ tag: tags.strong, fontWeight: 'bold' },
-	{ tag: tags.emphasis, fontStyle: 'italic' },
-	{ tag: tags.strikethrough, textDecoration: 'line-through' },
-	{ tag: [tags.link, tags.url], color: 'var(--color-primary-element)' },
-	{ tag: tags.monospace, fontFamily: 'var(--font-face-monospace, monospace)', color: 'var(--color-text-maxcontrast)' },
-	{ tag: tags.quote, fontStyle: 'italic', color: 'var(--color-text-maxcontrast)' },
-	{ tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: 'var(--color-text-maxcontrast)' },
-	{ tag: tags.list, color: 'var(--color-primary-element)' },
-])
+import { markdownEditorHighlighting } from '../utils/markdownEditor.js'
 
 const theme = EditorView.theme({
 	'&': {
@@ -118,8 +100,7 @@ export default {
 					highlightSelectionMatches(),
 					search({ top: true }),
 					keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
-					markdown({ base: markdownLanguage }),
-					syntaxHighlighting(highlightStyle),
+					markdownEditorHighlighting(),
 					EditorView.lineWrapping,
 					placeholder(this.placeholder),
 					theme,

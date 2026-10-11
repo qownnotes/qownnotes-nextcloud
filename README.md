@@ -39,6 +39,11 @@ npm ci && npm run build
 occ app:enable qownnotes
 ```
 
+## Markdown editor
+
+Edit mode highlights headings, inline formatting, links, task checkboxes, Markdown markers and comments.
+Fenced code blocks with a language label (for example, `js`, `python` or `php`) also get syntax highlighting; language support is loaded on demand.
+
 ## Live preview
 
 In **QOwnNotes settings → Editor**, enable **Show preview beside the editor** and save.
