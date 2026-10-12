@@ -9,6 +9,8 @@ QOwnNotes for Nextcloud lets you view and edit the notes of your [QOwnNotes](htt
 
 It also provides the server APIs for the [QOwnNotes desktop app](https://www.qownnotes.org) (note versions and trash) and the [QOwnNotes Android app](https://github.com/qownnotes/qownnotes-android) (a Nextcloud Notes API compatible note API), and replaces the QOwnNotesAPI app and, for QOwnNotes Android, the Nextcloud Notes app.
 
+![Markdown editor with note subfolders and tags](docs/screenshots/editor.png)
+
 ## Features
 
 - Notes stay plain Markdown files in your Nextcloud, organized in note subfolders like in QOwnNotes Desktop
@@ -86,6 +88,7 @@ just vm-test-version   # NixOS VM test against a single Nextcloud version (defau
 just vm-test           # NixOS VM test against all supported Nextcloud versions
 just release-check     # validate release metadata and packaging inputs (no credentials needed)
 just sign-app          # signed release archive in build/ (see docs/release.md)
+just screenshots       # app store and README screenshots in docs/screenshots/ (docker dev server)
 ```
 
 The VM tests use the git-tracked files, so add new files with `git add` before running them.

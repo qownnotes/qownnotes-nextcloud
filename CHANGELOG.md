@@ -35,6 +35,7 @@
   - Changes of `notes.sqlite` within the same second always get a new ETag, so other clients notice them;
     the modification time keeps increasing, so quick successive changes never bring back an earlier ETag
     and its cached tags
+  - `just screenshots` creates the app store and README screenshots with Playwright and a demo user
   - Rejected `notes.sqlite` copies are cleaned up, and the 50 MiB limit is enforced even with stale storage metadata
   - Tag compatibility tests use a real Desktop schema-16 database; VM tests exercise parallel API and WebDAV writes
   - Tag responses respect read-only shares even when permissions change without a new database ETag

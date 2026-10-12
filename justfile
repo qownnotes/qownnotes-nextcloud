@@ -80,6 +80,12 @@ lint-js:
 test-e2e args='':
     cd tests/e2e && npm ci && CHROMIUM_PATH="${CHROMIUM_PATH:-$(command -v chromium || true)}" npx playwright test {{ args }}
 
+# Create the app store and README screenshots in docs/screenshots with the docker dev server (see tests/e2e/README.md)
+[group('dev')]
+screenshots args='':
+    cd tests/e2e && npm ci && CHROMIUM_PATH="${CHROMIUM_PATH:-$(command -v chromium || true)}" npx playwright test --config playwright.screenshots.config.js {{ args }}
+    if command -v oxipng > /dev/null; then oxipng --opt 4 --strip safe docs/screenshots/*.png; else echo "oxipng not found, the screenshots are not optimized"; fi
+
 # Run all PHP checks (syntax, code style, static analysis, unit tests)
 [group('linter')]
 lint-php:

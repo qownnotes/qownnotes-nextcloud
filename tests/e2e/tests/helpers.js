@@ -20,11 +20,13 @@ export function uniqueName(prefix) {
 
 /**
  * @param {import('@playwright/test').Page} page the page
+ * @param {string} user the user name
+ * @param {string} password the password
  */
-export async function login(page) {
+export async function login(page, user = USER, password = PASSWORD) {
 	await page.goto('/index.php/login')
-	await page.fill('#user', USER)
-	await page.fill('#password', PASSWORD)
+	await page.fill('#user', user)
+	await page.fill('#password', password)
 	await page.click('button[type=submit]')
 	await page.waitForURL(/\/apps\//u)
 }
@@ -33,12 +35,14 @@ export async function login(page) {
  * An API client with basic auth, for preparing and checking data
  *
  * @param {string} baseURL the server URL
+ * @param {string} user the user name
+ * @param {string} password the password
  */
-export async function apiClient(baseURL) {
+export async function apiClient(baseURL, user = USER, password = PASSWORD) {
 	const context = await request.newContext({
 		baseURL,
 		extraHTTPHeaders: {
-			Authorization: 'Basic ' + Buffer.from(`${USER}:${PASSWORD}`).toString('base64'),
+			Authorization: 'Basic ' + Buffer.from(`${user}:${password}`).toString('base64'),
 			'OCS-APIRequest': 'true',
 			Accept: 'application/json',
 		},
@@ -55,6 +59,7 @@ export async function apiClient(baseURL) {
 		get: (path) => call('GET', path),
 		post: (path, data) => call('POST', path, data),
 		put: (path, data, headers) => call('PUT', path, data, headers),
+		patch: (path, data) => call('PATCH', path, data),
 		delete: (path) => call('DELETE', path),
 		dispose: () => context.dispose(),
 	}
