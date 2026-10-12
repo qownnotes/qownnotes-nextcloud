@@ -224,9 +224,11 @@ class TagDatabase {
 				$file->putContent($handle);
 
 				// Storages like the local one derive the ETag from the modification time and size, so two changes
-				// within the same second could keep the ETag, and other clients and the cache would miss the change
+				// within the same second could keep the ETag, and other clients and the cache would miss the change.
+				// The modification time must also keep increasing: after an earlier change was moved into the future,
+				// putContent() sets an older time again, which can bring back the ETag of an earlier version.
 				$stored = $this->getFile($notesFolder);
-				if ($stored !== null && $stored->getEtag() === $previousEtag) {
+				if ($stored !== null && ($stored->getEtag() === $previousEtag || $stored->getMTime() <= $previousMtime)) {
 					$stored->touch(max(time(), $previousMtime) + 1);
 				}
 			}

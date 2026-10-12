@@ -32,7 +32,9 @@
   - Integrations: "Recent notes" dashboard widget, unified search for notes (including tags, `#tag`),
     link previews and smart picker for notes, and "Open in QOwnNotes" in the Files app; all of them are
     hidden in API-only mode
-  - Changes of `notes.sqlite` within the same second always get a new ETag, so other clients notice them
+  - Changes of `notes.sqlite` within the same second always get a new ETag, so other clients notice them;
+    the modification time keeps increasing, so quick successive changes never bring back an earlier ETag
+    and its cached tags
   - Rejected `notes.sqlite` copies are cleaned up, and the 50 MiB limit is enforced even with stale storage metadata
   - Tag compatibility tests use a real Desktop schema-16 database; VM tests exercise parallel API and WebDAV writes
   - Tag responses respect read-only shares even when permissions change without a new database ETag

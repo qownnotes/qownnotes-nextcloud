@@ -33,6 +33,7 @@ The server updates links only for changes made through this app: the web interfa
 2. Before use, the copy is checked: it must be an SQLite 3 database in rollback-journal mode (no write-ahead logging), pass `PRAGMA quick_check`, have the required tables and columns, a schema version (`appData.database_version`) of at least 15, and be at most 50 MiB.
    The size limit is enforced on the copied bytes as well as the storage metadata, so stale size information cannot bypass it.
 3. Parsed tags are cached per file ETag, so repeated reads only cost a file `stat`.
+   Storages like the local one derive the ETag from the modification time and size, so every change keeps the modification time strictly increasing (if needed, one second after the previous one). Otherwise, changes within the same second could keep the ETag or bring back the ETag, and the cached tags, of an earlier version.
 4. Changes are only made for schema versions 15 and 16. Files with a newer version are read-only (`writable: false`), until the server app supports that version.
    The `writable` flag also respects the current file permissions (or folder creation permission if the database is missing). Permissions are checked even for cached tag data, because share access may change without a new file ETag.
 5. A change takes an exclusive lock, applies all operations of the request in one transaction with `journal_mode=DELETE`, checks the header again and uploads the file **only if rows changed**. Other tables like `trashItem` are never touched, and the file is never vacuumed or converted.
