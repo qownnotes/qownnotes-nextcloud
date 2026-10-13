@@ -10,9 +10,9 @@
 <script>
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { Compartment, EditorState } from '@codemirror/state'
+import { Compartment, EditorState, Prec } from '@codemirror/state'
 import { drawSelection, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
-import { markdownEditorHighlighting, toggleTaskCheckbox } from '../utils/markdownEditor.js'
+import { insertTaskAbove, markdownEditorHighlighting, toggleTaskCheckbox } from '../utils/markdownEditor.js'
 
 const theme = EditorView.theme({
 	'&': {
@@ -99,6 +99,7 @@ export default {
 					highlightActiveLine(),
 					highlightSelectionMatches(),
 					search({ top: true }),
+					Prec.highest(keymap.of([{ key: 'Enter', run: insertTaskAbove }])),
 					keymap.of([
 						{ key: 'Ctrl-Space', run: toggleTaskCheckbox, preventDefault: true },
 						...defaultKeymap,

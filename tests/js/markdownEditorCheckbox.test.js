@@ -8,7 +8,7 @@ import { EditorSelection, EditorState } from '@codemirror/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createApp, h } from 'vue'
 import MarkdownEditor from '../../src/components/MarkdownEditor.vue'
-import { markdownEditorHighlighting, toggleTaskCheckbox } from '../../src/utils/markdownEditor.js'
+import { insertTaskAbove, markdownEditorHighlighting, toggleTaskCheckbox } from '../../src/utils/markdownEditor.js'
 
 /**
  * A command target that applies real CodeMirror transactions without a DOM.
@@ -31,6 +31,50 @@ function editor(doc, cursor = doc.length, readonly = false) {
 	}
 	return view
 }
+
+describe('insert task above command', () => {
+	it.each(['- [ ] task', '* [x] task', '+ [X] task', '1. [ ] task', '2) [ ] task', '- parent\n  - [x] nested', '> - [ ] quoted', '> > 1. [ ] nested quote'])('inserts above %s before the marker or text', (doc) => {
+		const lineStart = doc.lastIndexOf('\n') + 1
+		const textStart = doc.indexOf(']', lineStart) + 2
+		const prefix = doc.slice(lineStart, textStart).replace(/\[[xX]\]/, '[ ]')
+		for (const cursor of [lineStart, doc.indexOf('[', lineStart), textStart]) {
+			const view = editor(doc, cursor)
+			expect(insertTaskAbove(view)).toBe(true)
+			expect(view.state.doc.toString()).toBe(doc.slice(0, lineStart) + prefix + '\n' + doc.slice(lineStart))
+			expect(view.state.selection.main.head).toBe(lineStart + prefix.length)
+			expect(undo(view)).toBe(true)
+			expect(view.state.doc.toString()).toBe(doc)
+			expect(view.state.selection.main.head).toBe(cursor)
+		}
+	})
+
+	it.each(['plain text', '- ordinary item', '- [ ] ', '```md\n- [ ] example\n```', '    - [ ] code', '<!--\n- [ ] comment\n-->'])('leaves non-tasks and empty tasks to normal Enter: %s', (doc) => {
+		const view = editor(doc, Math.max(0, doc.indexOf('-')))
+		expect(insertTaskAbove(view)).toBe(false)
+		expect(view.state.doc.toString()).toBe(doc)
+	})
+
+	it('does not intercept Enter within task text or in read-only notes', () => {
+		for (const view of [editor('- [ ] task', 7), editor('- [ ] task'), editor('- [ ] task', 0, true)]) {
+			expect(insertTaskAbove(view)).toBe(false)
+			expect(view.state.doc.toString()).toBe('- [ ] task')
+		}
+	})
+
+	it('does not replace selected text', () => {
+		const view = editor('- [ ] task')
+		view.dispatch({ selection: EditorSelection.range(0, 6) })
+		expect(insertTaskAbove(view)).toBe(false)
+	})
+
+	it('inserts above multiple cursor lines', () => {
+		const view = editor('- [ ] first\n- [x] second')
+		view.dispatch({ selection: EditorSelection.create([EditorSelection.cursor(0), EditorSelection.cursor(18)]) })
+		expect(insertTaskAbove(view)).toBe(true)
+		expect(view.state.doc.toString()).toBe('- [ ] \n- [ ] first\n- [ ] \n- [x] second')
+		expect(view.state.selection.ranges.map((range) => range.head)).toEqual([6, 25])
+	})
+})
 
 describe('task checkbox command', () => {
 	it.each(['- [ ] task', '* [ ] task', '+ [ ] task', '1. [ ] task', '2) [ ] task', '- parent\n  - [ ] nested', '> - [ ] quoted', '> > 1. [ ] nested quote'])('toggles %s in both directions and preserves the cursor', (doc) => {
@@ -87,6 +131,24 @@ afterEach(() => {
 })
 
 describe('editor checkbox shortcut', () => {
+	it.each([
+		[0, '- [ ] \n- [x] task'],
+		[6, '- [ ] \n- [x] task'],
+		[10, '- [x] task\n- [ ] '],
+	])('handles Enter at cursor %s with Markdown keymap precedence', (cursor, expected) => {
+		const updates = []
+		container = document.createElement('div')
+		document.body.append(container)
+		app = createApp(MarkdownEditor, {
+			modelValue: '- [x] task',
+			'onUpdate:modelValue': (value) => updates.push(value),
+		})
+		const component = app.mount(container)
+		component.view.dispatch({ selection: { anchor: cursor } })
+		container.querySelector('.cm-content').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }))
+		expect(updates).toEqual([expected])
+	})
+
 	it.each([false, true])('handles Ctrl+Space with readonly=%s', (readonly) => {
 		const updates = []
 		container = document.createElement('div')
