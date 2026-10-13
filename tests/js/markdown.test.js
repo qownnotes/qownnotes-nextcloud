@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+import { languages } from '@codemirror/language-data'
 import { getRequestToken } from '@nextcloud/auth'
 import { describe, expect, it, vi } from 'vitest'
 import { renderMarkdown, toggleTask } from '../../src/utils/markdown.js'
@@ -37,6 +38,23 @@ describe('markdown', () => {
 		expect(html).not.toContain('<script')
 		expect(html).not.toContain('onerror')
 		expect(html).not.toContain('href="javascript:')
+	})
+
+	it('highlights code blocks once their language is loaded', async () => {
+		const content = '```python\ndef answer():\n    return 42  # comment\n```\n\n```unknown\n<b>\n```'
+		const loaded = vi.fn()
+		const before = renderMarkdown(content, { ...options, onCodeLanguagesLoaded: loaded })
+		expect(before).toContain('<code class="language-python">def answer():')
+		expect(before).toContain('<code class="language-unknown">&lt;b&gt;')
+		await vi.waitFor(() => expect(loaded).toHaveBeenCalledOnce())
+		expect(languages.find((language) => language.name === 'Python').support).toBeDefined()
+
+		const after = renderMarkdown(content, { ...options, onCodeLanguagesLoaded: loaded })
+		expect(after).toContain('<span class="qn-code-keyword">def</span>')
+		expect(after).toContain('<span class="qn-code-number">42</span>')
+		expect(after).toContain('<span class="qn-code-comment"># comment</span>')
+		expect(after).toContain('<code class="language-unknown">&lt;b&gt;')
+		expect(loaded).toHaveBeenCalledOnce()
 	})
 
 	it('renders task lists', () => {

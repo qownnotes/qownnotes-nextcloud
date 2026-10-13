@@ -1,5 +1,10 @@
 # QOwnNotes for Nextcloud Changelog
 
+## 26.10.1
+
+- Code blocks are syntax highlighted in the editor and the preview, with colors for light and dark themes;
+  in the editor, code blocks are shown in a monospace font on a background like in the preview
+
 ## 26.10.0
 
 - Initial development version

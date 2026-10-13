@@ -44,7 +44,7 @@ occ app:enable qownnotes
 ## Markdown editor
 
 Edit mode highlights headings, inline formatting, links, task checkboxes, Markdown markers and comments.
-Fenced code blocks with a language label (for example, `js`, `python` or `php`) also get syntax highlighting; language support is loaded on demand.
+Fenced code blocks with a language label (for example, `js`, `python` or `php`) also get syntax highlighting in the editor and the preview, with colors for light and dark themes; language support is loaded on demand.
 
 Press **Ctrl+Space** with the cursor on a task line to check or uncheck its checkbox (`- [ ]` / `- [x]`).
 This also works for nested tasks and tasks in blockquotes or numbered lists, and can be undone like a normal edit.

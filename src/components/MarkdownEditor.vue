@@ -41,6 +41,22 @@ const theme = EditorView.theme({
 	'&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
 		backgroundColor: 'var(--color-primary-element-light) !important',
 	},
+	'.cm-line.cm-qn-code-block': {
+		padding: '0 8px',
+		fontFamily: 'var(--font-face-monospace, monospace)',
+		backgroundColor: 'var(--color-background-dark)',
+	},
+	'.cm-line.cm-qn-code-block.cm-activeLine': {
+		backgroundColor: 'var(--color-background-darker)',
+	},
+	'.cm-qn-code-block-first': {
+		borderStartStartRadius: 'var(--border-radius)',
+		borderStartEndRadius: 'var(--border-radius)',
+	},
+	'.cm-qn-code-block-last': {
+		borderEndStartRadius: 'var(--border-radius)',
+		borderEndEndRadius: 'var(--border-radius)',
+	},
 	'.cm-panels': {
 		backgroundColor: 'var(--color-main-background)',
 		color: 'var(--color-main-text)',

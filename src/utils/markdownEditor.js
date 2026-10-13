@@ -4,10 +4,12 @@
  */
 
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { ensureSyntaxTree, HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { ensureSyntaxTree, HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
-import { EditorSelection } from '@codemirror/state'
+import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
+import { Decoration, ViewPlugin } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
+import { codeHighlighter } from './codeHighlighting.js'
 
 // Use Nextcloud's theme colors so highlighting also works in dark mode.
 export const markdownHighlightStyle = HighlightStyle.define([
@@ -24,13 +26,61 @@ export const markdownHighlightStyle = HighlightStyle.define([
 	{ tag: [tags.processingInstruction, tags.contentSeparator], color: 'var(--color-primary-element)' },
 	{ tag: [tags.labelName, tags.atom, tags.meta], color: 'var(--color-primary-element)' },
 	{ tag: [tags.escape, tags.character], color: 'var(--color-primary-element)' },
-	{ tag: tags.comment, color: 'var(--color-text-maxcontrast)', fontStyle: 'italic' },
-	{ tag: [tags.keyword, tags.operator], color: 'var(--color-primary-element)', fontWeight: 'bold' },
-	{ tag: [tags.string, tags.regexp], color: 'var(--color-success-text, var(--color-success))' },
-	{ tag: [tags.number, tags.bool, tags.null], color: 'var(--color-warning-text, var(--color-primary-element))' },
-	{ tag: [tags.typeName, tags.className, tags.function(tags.variableName)], color: 'var(--color-primary-element)' },
-	{ tag: tags.invalid, color: 'var(--color-error-text, var(--color-error))' },
 ])
+
+/**
+ * Line decorations for code blocks, so they are shown in a monospace font on a background like in the preview
+ *
+ * @param {import('@codemirror/view').EditorView} view editor view
+ * @return {import('@codemirror/view').DecorationSet}
+ */
+function codeBlockDecorations(view) {
+	const builder = new RangeSetBuilder()
+	const tree = syntaxTree(view.state)
+	let last = -1
+	for (const { from, to } of view.visibleRanges) {
+		tree.iterate({
+			from,
+			to,
+			enter(node) {
+				if (node.name !== 'FencedCode' && node.name !== 'CodeBlock') {
+					return
+				}
+				const first = view.state.doc.lineAt(node.from).number
+				const end = view.state.doc.lineAt(node.to).number
+				for (let number = Math.max(first, last + 1); number <= end; number++) {
+					const line = view.state.doc.line(number)
+					if (line.from > to) {
+						break
+					}
+					const classes = ['cm-qn-code-block']
+					if (number === first) {
+						classes.push('cm-qn-code-block-first')
+					}
+					if (number === end) {
+						classes.push('cm-qn-code-block-last')
+					}
+					builder.add(line.from, line.from, Decoration.line({ class: classes.join(' ') }))
+					last = number
+				}
+				return false
+			},
+		})
+	}
+	return builder.finish()
+}
+
+const codeBlockPlugin = ViewPlugin.fromClass(class {
+	constructor(view) {
+		this.decorations = codeBlockDecorations(view)
+	}
+
+	update(update) {
+		if (update.docChanged || update.viewportChanged || syntaxTree(update.startState) !== syntaxTree(update.state)) {
+			this.decorations = codeBlockDecorations(update.view)
+		}
+	}
+}, { decorations: (plugin) => plugin.decorations })
 
 /**
  * Markdown and lazily loaded syntax highlighting for fenced code languages.
@@ -41,6 +91,8 @@ export function markdownEditorHighlighting() {
 	return [
 		markdown({ base: markdownLanguage, codeLanguages: languages }),
 		syntaxHighlighting(markdownHighlightStyle),
+		syntaxHighlighting(codeHighlighter),
+		codeBlockPlugin,
 	]
 }
 

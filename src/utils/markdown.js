@@ -6,13 +6,28 @@
 import DOMPurify from 'dompurify'
 import MarkdownIt from 'markdown-it'
 import taskLists from 'markdown-it-task-lists'
+import { highlightCodeToHtml, loadCodeLanguage } from './codeHighlighting.js'
 import { attachmentUrl, isRelativeLink } from './mediaLinks.js'
 
 const TASK_PATTERN = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\])/u
 const FENCE_PATTERN = /^\s*(`{3,}|~{3,})/u
 
-const markdownIt = new MarkdownIt({ html: true, linkify: true, breaks: false })
-	.use(taskLists, { enabled: true, label: true })
+// Languages of code blocks of the running render whose parser still has to be loaded
+let pendingLanguages = new Set()
+
+const markdownIt = new MarkdownIt({
+	html: true,
+	linkify: true,
+	breaks: false,
+	highlight(code, info) {
+		const { html, pending } = highlightCodeToHtml(code, info)
+		if (pending) {
+			pendingLanguages.add(pending)
+		}
+		// An empty string lets markdown-it escape the code
+		return html ?? ''
+	},
+}).use(taskLists, { enabled: true, label: true })
 
 /**
  * Renders the note text to sanitized HTML; relative links to media files and attachments are served by the
@@ -22,10 +37,16 @@ const markdownIt = new MarkdownIt({ html: true, linkify: true, breaks: false })
  * @param {object} options the options
  * @param {string} options.apiBase base URL of the API
  * @param {number} options.noteId ID of the note
+ * @param {() => void} [options.onCodeLanguagesLoaded] called when the languages of code blocks that could not be
+ *   highlighted yet are loaded, so the note can be rendered again
  * @return {string}
  */
-export function renderMarkdown(content, { apiBase, noteId }) {
+export function renderMarkdown(content, { apiBase, noteId, onCodeLanguagesLoaded }) {
+	pendingLanguages = new Set()
 	const html = DOMPurify.sanitize(markdownIt.render(content), { ADD_ATTR: ['target'] })
+	if (pendingLanguages.size > 0 && onCodeLanguagesLoaded) {
+		Promise.all([...pendingLanguages].map(loadCodeLanguage)).then(onCodeLanguagesLoaded)
+	}
 	const template = document.createElement('template')
 	template.innerHTML = html
 

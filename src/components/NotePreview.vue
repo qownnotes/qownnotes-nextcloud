@@ -34,9 +34,23 @@ export default {
 
 	emits: ['toggleTask'],
 
+	data() {
+		return {
+			// Changed when the parsers of code block languages are loaded, to highlight the code blocks
+			codeLanguagesLoaded: 0,
+		}
+	},
+
 	computed: {
 		html() {
-			return renderMarkdown(this.content, { apiBase: API_BASE, noteId: this.noteId })
+			this.codeLanguagesLoaded
+			return renderMarkdown(this.content, {
+				apiBase: API_BASE,
+				noteId: this.noteId,
+				onCodeLanguagesLoaded: () => {
+					this.codeLanguagesLoaded++
+				},
+			})
 		},
 	},
 

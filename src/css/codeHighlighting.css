@@ -1,0 +1,112 @@
+/**
+ * SPDX-FileCopyrightText: 2026 Patrizio Bekerle <patrizio@bekerle.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+/* Colors of the code highlighting in the editor and the preview (classes of codeHighlighter in utils/codeHighlighting.js).
+   Nextcloud has no theme colors for code, so there are colors for light and dark themes. */
+body {
+	--qn-code-keyword: #cf222e;
+	--qn-code-string: #0a3069;
+	--qn-code-regexp: #116329;
+	--qn-code-number: #0550ae;
+	--qn-code-comment: #6e7781;
+	--qn-code-function: #8250df;
+	--qn-code-type: #953800;
+	--qn-code-property: #0550ae;
+	--qn-code-tag: #116329;
+	--qn-code-meta: #953800;
+	--qn-code-inserted: #116329;
+	--qn-code-deleted: #82071e;
+	--qn-code-invalid: #82071e;
+}
+
+body[data-theme-dark],
+body[data-theme-dark-highcontrast] {
+	--qn-code-keyword: #ff7b72;
+	--qn-code-string: #a5d6ff;
+	--qn-code-regexp: #7ee787;
+	--qn-code-number: #79c0ff;
+	--qn-code-comment: #8b949e;
+	--qn-code-function: #d2a8ff;
+	--qn-code-type: #ffa657;
+	--qn-code-property: #79c0ff;
+	--qn-code-tag: #7ee787;
+	--qn-code-meta: #ffa657;
+	--qn-code-inserted: #7ee787;
+	--qn-code-deleted: #ffa198;
+	--qn-code-invalid: #ffa198;
+}
+
+/* The default theme follows the system */
+@media (prefers-color-scheme: dark) {
+	body[data-theme-default] {
+		--qn-code-keyword: #ff7b72;
+		--qn-code-string: #a5d6ff;
+		--qn-code-regexp: #7ee787;
+		--qn-code-number: #79c0ff;
+		--qn-code-comment: #8b949e;
+		--qn-code-function: #d2a8ff;
+		--qn-code-type: #ffa657;
+		--qn-code-property: #79c0ff;
+		--qn-code-tag: #7ee787;
+		--qn-code-meta: #ffa657;
+		--qn-code-inserted: #7ee787;
+		--qn-code-deleted: #ffa198;
+		--qn-code-invalid: #ffa198;
+	}
+}
+
+.qn-code-keyword {
+	color: var(--qn-code-keyword);
+}
+
+.qn-code-string {
+	color: var(--qn-code-string);
+}
+
+.qn-code-regexp {
+	color: var(--qn-code-regexp);
+}
+
+.qn-code-number {
+	color: var(--qn-code-number);
+}
+
+.qn-code-comment {
+	color: var(--qn-code-comment);
+	font-style: italic;
+}
+
+.qn-code-function {
+	color: var(--qn-code-function);
+}
+
+.qn-code-type {
+	color: var(--qn-code-type);
+}
+
+.qn-code-property {
+	color: var(--qn-code-property);
+}
+
+.qn-code-tag {
+	color: var(--qn-code-tag);
+}
+
+.qn-code-meta {
+	color: var(--qn-code-meta);
+}
+
+.qn-code-inserted {
+	color: var(--qn-code-inserted);
+}
+
+.qn-code-deleted {
+	color: var(--qn-code-deleted);
+}
+
+.qn-code-invalid {
+	color: var(--qn-code-invalid);
+	text-decoration: underline wavy;
+}
