@@ -91,7 +91,8 @@
 				v-model="content"
 				:readonly="note.readonly"
 				:placeholder="t('qownnotes', 'Write your note …')"
-				@scroll="onEditorScroll" />
+				@scroll="onEditorScroll"
+				@openLink="openLink" />
 			<NotePreview
 				v-if="preview"
 				ref="preview"
@@ -100,7 +101,8 @@
 				:readonly="note.readonly"
 				@toggleTask="onToggleTask"
 				@scroll="onPreviewScroll"
-				@rendered="onPreviewRendered" />
+				@rendered="onPreviewRendered"
+				@openLink="openLink" />
 		</div>
 
 		<input
@@ -154,12 +156,15 @@ import DiffView from './DiffView.vue'
 import MarkdownEditor from './MarkdownEditor.vue'
 import NotePreview from './NotePreview.vue'
 import NoteTagEditor from './NoteTagEditor.vue'
-import { errorMessage, uploadAttachment } from '../api.js'
+import { API_BASE, errorMessage, uploadAttachment } from '../api.js'
+import { noteRoute, routeFolder } from '../router.js'
 import { useFoldersStore } from '../stores/folders.js'
 import { NoteConflictError, useNotesStore } from '../stores/notes.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
 import { toggleTask } from '../utils/markdown.js'
+import { attachmentUrl } from '../utils/mediaLinks.js'
+import { findHeadingLine, findLinkedNote, parseLink } from '../utils/noteLinks.js'
 import { titleFromContent } from '../utils/noteTitle.js'
 
 const AUTOSAVE_DELAY = 1000
@@ -318,10 +323,20 @@ export default {
 		this.scrollLine = 0
 	},
 
-	mounted() {
+	async mounted() {
 		window.addEventListener('beforeunload', this.onBeforeUnload)
 		if (this.notesStore.get(this.noteId)?.content === undefined) {
-			this.notesStore.reload(this.noteId)
+			await this.notesStore.reload(this.noteId)
+		}
+		// The heading of a followed note link
+		const heading = this.$route.query.heading
+		if (typeof heading === 'string') {
+			// The loaded text is taken over by the watcher of note.content
+			await this.$nextTick()
+			this.jumpToHeading(heading)
+			const query = { ...this.$route.query }
+			delete query.heading
+			this.$router.replace({ ...this.$route, query })
 		}
 	},
 
@@ -431,6 +446,47 @@ export default {
 
 		togglePreview() {
 			this.settingsStore.setLocal('preview', !this.preview)
+		},
+
+		/**
+		 * Follows a link of the note like QOwnNotes Desktop: links to other notes open them (and jump to the
+		 * heading of the fragment), "#heading" links jump to the heading, other files and web pages are opened in
+		 * a new browser tab
+		 *
+		 * @param {string} href the link
+		 */
+		openLink(href) {
+			const link = parseLink(href)
+			if (link.type === 'external') {
+				window.open(link.path, '_blank', 'noopener,noreferrer')
+			} else if (link.type === 'heading') {
+				this.jumpToHeading(link.fragment)
+			} else if (link.type === 'file') {
+				const note = findLinkedNote(this.notesStore.list, this.note.category ?? '', link.path)
+				if (note?.id === this.noteId) {
+					this.jumpToHeading(link.fragment)
+				} else if (note) {
+					this.$router.push(noteRoute(note.id, routeFolder(this.$route), link.fragment || null))
+				} else {
+					window.open(attachmentUrl(API_BASE, this.noteId, link.path, true), '_blank', 'noopener,noreferrer')
+				}
+			}
+		},
+
+		/**
+		 * @param {string} fragment the URL-encoded heading text or its anchor
+		 */
+		jumpToHeading(fragment) {
+			const line = findHeadingLine(this.content, fragment)
+			if (line === null) {
+				return
+			}
+			this.scrollLine = line
+			if (this.$refs.editor) {
+				this.$refs.editor.jumpToLine(line)
+			} else {
+				this.$refs.preview?.scrollToLine(line)
+			}
 		},
 
 		onEditorScroll(line) {

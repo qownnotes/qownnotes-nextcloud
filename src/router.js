@@ -19,7 +19,8 @@ export default createRouter({
 		{ path: '/', name: 'all', component: empty },
 		// The selected subfolder ('' for the root of the note folder)
 		{ path: '/folder/:path*', name: 'folder', component: empty },
-		// The selected note; the optional query parameter "folder" keeps the selected subfolder
+		// The selected note; the optional query parameter "folder" keeps the selected subfolder, "heading" is the
+		// heading of a followed note link
 		{ path: '/note/:id(\\d+)', name: 'note', component: empty },
 		{ path: '/:pathMatch(.*)*', redirect: '/' },
 	],
@@ -57,9 +58,14 @@ export function routeNoteId(route) {
  *
  * @param {number} id the note ID
  * @param {string|null} folder the selected subfolder
+ * @param {string|null} heading the heading to jump to, the fragment of a note link
  */
-export function noteRoute(id, folder) {
-	return { name: 'note', params: { id: String(id) }, query: folder === null ? {} : { folder } }
+export function noteRoute(id, folder, heading = null) {
+	const query = folder === null ? {} : { folder }
+	if (heading) {
+		query.heading = heading
+	}
+	return { name: 'note', params: { id: String(id) }, query }
 }
 
 /**

@@ -67,6 +67,8 @@ export function renderMarkdown(content, { apiBase, noteId, onCodeLanguagesLoaded
 	}
 	for (const link of template.content.querySelectorAll('a[href]')) {
 		const href = link.getAttribute('href')
+		// The original link, for opening notes and headings
+		link.dataset.href = href
 		if (isRelativeLink(href)) {
 			link.setAttribute('href', attachmentUrl(apiBase, noteId, href, true))
 		}
@@ -77,6 +79,23 @@ export function renderMarkdown(content, { apiBase, noteId, onCodeLanguagesLoaded
 	}
 
 	return template.innerHTML
+}
+
+/**
+ * The headings of the note text, without the ones in code blocks
+ *
+ * @param {string} content the note text
+ * @return {Array<{level: number, text: string, line: number}>} line is 0-based
+ */
+export function noteHeadings(content) {
+	const tokens = markdownIt.parse(content, {})
+	const headings = []
+	for (let i = 0; i < tokens.length - 1; i++) {
+		if (tokens[i].type === 'heading_open') {
+			headings.push({ level: Number(tokens[i].tag.slice(1)), text: tokens[i + 1].content, line: tokens[i].map[0] })
+		}
+	}
+	return headings
 }
 
 /**

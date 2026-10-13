@@ -17,8 +17,8 @@ describe('markdown', () => {
 	it('serves relative media links with the attachment API', () => {
 		const html = renderMarkdown('![x](../media/a%20b.png)\n\n[pdf](../attachments/c.pdf) [web](https://example.com)', options)
 		expect(html).toContain('src="/apps/qownnotes/api/v1/attachment/42?path=..%2Fmedia%2Fa%2520b.png&amp;requesttoken=token%2B%2F%3D"')
-		expect(html).toContain('href="/apps/qownnotes/api/v1/attachment/42?path=..%2Fattachments%2Fc.pdf&amp;inline=1&amp;requesttoken=token%2B%2F%3D" target="_blank" rel="noopener noreferrer"')
-		expect(html).toContain('href="https://example.com" target="_blank" rel="noopener noreferrer"')
+		expect(html).toContain('href="/apps/qownnotes/api/v1/attachment/42?path=..%2Fattachments%2Fc.pdf&amp;inline=1&amp;requesttoken=token%2B%2F%3D" data-href="../attachments/c.pdf" target="_blank" rel="noopener noreferrer"')
+		expect(html).toContain('href="https://example.com" data-href="https://example.com" target="_blank" rel="noopener noreferrer"')
 	})
 
 	it('does not add the session token to external images or links', () => {

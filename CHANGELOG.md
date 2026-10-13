@@ -13,6 +13,10 @@
 - Polished search panel of the editor in the Nextcloud style: one compact row with icon buttons, toggles for
   case, whole words and regular expressions, the number of matches ("2 of 60", "No results"), and a collapsible
   replace row that is hidden for read-only notes
+- Links to other notes like `[TODO](TODO.md#todo)` can be clicked in the preview and Ctrl+clicked (Cmd+click on macOS)
+  in the editor, like in QOwnNotes Desktop; Ctrl+Space follows the link at the cursor. The linked note opens relative
+  to the subfolder of the current note, and the fragment jumps to its heading (URL-encoded heading text or
+  `#heading-anchor`), also for headings of the same note. Other files and web pages open in a new browser tab
 
 ## 26.10.0
 

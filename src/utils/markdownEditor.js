@@ -7,8 +7,8 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { ensureSyntaxTree, HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
-import { Decoration, ViewPlugin } from '@codemirror/view'
-import { tags } from '@lezer/highlight'
+import { Decoration, EditorView, ViewPlugin } from '@codemirror/view'
+import { tagHighlighter, tags } from '@lezer/highlight'
 import { codeHighlighter } from './codeHighlighting.js'
 
 // Use Nextcloud's theme colors so highlighting also works in dark mode.
@@ -189,5 +189,97 @@ export function toggleTaskCheckbox(view) {
 	}
 
 	view.dispatch({ changes: changes.sort((a, b) => a.from - b.from), userEvent: 'input.toggleTask' })
+	return true
+}
+
+/**
+ * The link at a position of the note text: the target of a Markdown link or image, an autolink or a plain URL
+ *
+ * @param {import('@codemirror/state').EditorState} state the editor state
+ * @param {number} pos the position
+ * @return {string|null}
+ */
+export function linkAt(state, pos) {
+	const tree = ensureSyntaxTree(state, Math.min(state.doc.length, pos + 1), 50) ?? syntaxTree(state)
+	for (const side of [1, -1]) {
+		for (let node = tree.resolveInner(pos, side); node; node = node.parent) {
+			if (node.name === 'Link' || node.name === 'Image' || node.name === 'Autolink') {
+				const url = node.getChild('URL')
+				return url ? state.sliceDoc(url.from, url.to) : null
+			}
+			if (node.name === 'URL') {
+				return state.sliceDoc(node.from, node.to)
+			}
+		}
+	}
+	return null
+}
+
+const linkHighlighter = tagHighlighter([{ tag: [tags.link, tags.url], class: 'cm-qn-link' }])
+
+/**
+ * Opens links with Ctrl+click (Cmd+click on macOS) like QOwnNotes Desktop; while the key is held, links get a
+ * pointer cursor
+ *
+ * @param {(href: string) => void} openLink called with the link
+ * @return {Array} CodeMirror extensions
+ */
+export function linkClicking(openLink) {
+	const isModifier = (event) => (/Mac/u.test(navigator.platform) ? event.metaKey : event.ctrlKey)
+	const setModifier = (view, on) => view.dom.classList.toggle('cm-qn-modifier', on)
+	return [
+		syntaxHighlighting(linkHighlighter),
+		EditorView.domEventHandlers({
+			mousedown(event, view) {
+				if (event.button !== 0 || !isModifier(event)) {
+					return false
+				}
+				const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+				const href = pos === null ? null : linkAt(view.state, pos)
+				if (href === null) {
+					return false
+				}
+				event.preventDefault()
+				openLink(href)
+				return true
+			},
+			keydown(event, view) {
+				setModifier(view, isModifier(event))
+				return false
+			},
+			keyup(event, view) {
+				setModifier(view, isModifier(event))
+				return false
+			},
+			mousemove(event, view) {
+				setModifier(view, isModifier(event))
+				return false
+			},
+			blur(event, view) {
+				setModifier(view, false)
+				return false
+			},
+		}),
+		EditorView.theme({
+			'&.cm-qn-modifier .cm-qn-link, &.cm-qn-modifier .cm-qn-link *': {
+				cursor: 'pointer',
+			},
+		}),
+	]
+}
+
+/**
+ * Opens the link at the cursor, see linkClicking
+ *
+ * @param {import('@codemirror/view').EditorView} view the editor view
+ * @param {(href: string) => void} openLink called with the link
+ * @return {boolean} whether there is a link at the cursor
+ */
+export function openLinkAtCursor(view, openLink) {
+	const href = linkAt(view.state, view.state.selection.main.head)
+	if (href === null) {
+		return false
+	}
+	openLink(href)
 	return true
 }

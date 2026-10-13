@@ -51,6 +51,11 @@ Press **Ctrl+F** to search in the note: Enter and Shift+Enter jump between the m
 Press **Ctrl+Space** with the cursor on a task line to check or uncheck its checkbox (`- [ ]` / `- [x]`).
 This also works for nested tasks and tasks in blockquotes or numbered lists, and can be undone like a normal edit.
 
+Like in QOwnNotes Desktop, hold **Ctrl** (**Cmd** on macOS) and click a link, or press **Ctrl+Space** with the cursor on it, to follow it; in the preview, a normal click is enough.
+Links to other notes like `[TODO](TODO.md#todo)` open the note, relative to the subfolder of the current note.
+The fragment jumps to a heading, either as URL-encoded heading text (`#My%20heading`) or as anchor (`#my-heading`), also within the same note (`[Back to the top](#title)`).
+Links to other files, like `[Audio recording](attachments/audio.m4a)`, and web pages open in a new browser tab.
+
 ## Live preview
 
 In **QOwnNotes settings → Editor**, enable **Show preview beside the editor** and save.

@@ -16,6 +16,7 @@
 <script>
 import { API_BASE } from '../api.js'
 import { renderMarkdown } from '../utils/markdown.js'
+import { parseLink } from '../utils/noteLinks.js'
 import { lineOfPreviewOffset, previewAnchors, previewOffsetOfLine } from '../utils/scrollSync.js'
 
 export default {
@@ -38,7 +39,7 @@ export default {
 		},
 	},
 
-	emits: ['toggleTask', 'scroll', 'rendered'],
+	emits: ['toggleTask', 'scroll', 'rendered', 'openLink'],
 
 	data() {
 		return {
@@ -109,6 +110,13 @@ export default {
 
 		onClick(event) {
 			const target = event.target
+			const link = target instanceof Element ? target.closest('a[data-href]') : null
+			if (link && parseLink(link.dataset.href).type !== 'external') {
+				// Links to notes, headings and files of the note folder are opened by the note editor
+				event.preventDefault()
+				this.$emit('openLink', link.dataset.href)
+				return
+			}
 			if (!(target instanceof HTMLInputElement) || !target.classList.contains('task-list-item-checkbox')) {
 				return
 			}

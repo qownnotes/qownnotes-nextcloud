@@ -12,7 +12,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, Prec } from '@codemirror/state'
 import { drawSelection, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
-import { insertTaskAbove, markdownEditorHighlighting, toggleTaskCheckbox } from '../utils/markdownEditor.js'
+import { insertTaskAbove, linkClicking, markdownEditorHighlighting, openLinkAtCursor, toggleTaskCheckbox } from '../utils/markdownEditor.js'
 import { createSearchPanel, searchPanelTheme } from '../utils/searchPanel.js'
 
 const theme = EditorView.theme({
@@ -84,7 +84,7 @@ export default {
 		},
 	},
 
-	emits: ['update:modelValue', 'scroll'],
+	emits: ['update:modelValue', 'scroll', 'openLink'],
 
 	watch: {
 		modelValue(value) {
@@ -108,6 +108,7 @@ export default {
 	},
 
 	mounted() {
+		const openLink = (href) => this.$emit('openLink', href)
 		this.view = new EditorView({
 			parent: this.$refs.container,
 			state: EditorState.create({
@@ -121,13 +122,15 @@ export default {
 					searchPanelTheme,
 					Prec.highest(keymap.of([{ key: 'Enter', run: insertTaskAbove }])),
 					keymap.of([
-						{ key: 'Ctrl-Space', run: toggleTaskCheckbox, preventDefault: true },
+						// Like in QOwnNotes Desktop, Ctrl+Space toggles a checkbox or follows the link at the cursor
+						{ key: 'Ctrl-Space', run: (view) => toggleTaskCheckbox(view) || openLinkAtCursor(view, openLink), preventDefault: true },
 						...defaultKeymap,
 						...historyKeymap,
 						...searchKeymap,
 						indentWithTab,
 					]),
 					markdownEditorHighlighting(),
+					linkClicking(openLink),
 					EditorView.lineWrapping,
 					placeholder(this.placeholder),
 					theme,
@@ -195,6 +198,23 @@ export default {
 				scrollDOM.scrollTop = top + this.view.documentTop - scrollDOM.getBoundingClientRect().top + scrollDOM.scrollTop
 			}
 			this.expectedScrollTop = scrollDOM.scrollTop
+		},
+
+		/**
+		 * Moves the cursor to the start of a line and scrolls it to the top, e.g. to jump to a heading
+		 *
+		 * @param {number} line the line (0-based)
+		 */
+		jumpToLine(line) {
+			// A new editor measures its lines first
+			window.requestAnimationFrame(() => {
+				if (!this.view) {
+					return
+				}
+				const { from } = this.view.state.doc.line(Math.min(Math.max(1, line + 1), this.view.state.doc.lines))
+				this.view.dispatch({ selection: { anchor: from }, effects: EditorView.scrollIntoView(from, { y: 'start' }) })
+				this.view.focus()
+			})
 		},
 
 		/**
