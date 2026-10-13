@@ -50,6 +50,7 @@
     Ctrl/Shift+click are now highlighted, the editor actions stay beside long titles, the settings dialog keeps
     Save and Cancel visible, the deleted notes dialog stacks its preview on small screens and selects the next
     note after a restore, and long tag names wrap in the tag color dialog
+  - The save status ("Unsaved changes", "Saving …") is shown beside the editor actions instead of pushing the editor down
   - Monochrome app icon based on the QOwnNotes icon (note sheet with header bar, cloud and folded corner)
   - Documentation of the APIs (`docs/api/`), the handling of `notes.sqlite` and a migration guide for
     users of the QOwnNotesAPI and Nextcloud Notes apps

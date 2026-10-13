@@ -15,10 +15,14 @@
 						<FolderOutline :size="16" />
 						<span>{{ note.category }}</span>
 					</span>
-					<span class="note-editor__status" :class="'note-editor__status--' + status" role="status">
-						{{ statusText }}
-					</span>
 				</div>
+				<span
+					class="note-editor__status"
+					:class="'note-editor__status--' + status"
+					:title="statusText"
+					role="status">
+					{{ statusText }}
+				</span>
 				<div class="note-editor__actions" role="group" :aria-label="t('qownnotes', 'Note actions')">
 					<NcButton
 						variant="tertiary"
@@ -540,10 +544,13 @@ export default {
 }
 
 .note-editor__status {
-	display: block;
+	flex: 0 1 auto;
+	min-width: 0;
 	color: var(--color-text-maxcontrast);
 	font-size: 0.9em;
-	overflow-wrap: anywhere;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .note-editor__status--error {
