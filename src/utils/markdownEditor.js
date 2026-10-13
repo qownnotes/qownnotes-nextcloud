@@ -22,7 +22,7 @@ export const markdownHighlightStyle = HighlightStyle.define([
 	{ tag: tags.emphasis, fontStyle: 'italic' },
 	{ tag: tags.strikethrough, textDecoration: 'line-through' },
 	{ tag: [tags.link, tags.url], color: 'var(--color-primary-element)', textDecoration: 'underline' },
-	{ tag: tags.monospace, fontFamily: 'var(--font-face-monospace, monospace)', backgroundColor: 'var(--color-background-dark)' },
+	{ tag: tags.monospace, fontFamily: 'var(--font-face-monospace, monospace)', backgroundColor: 'color-mix(in srgb, var(--color-main-text) 6%, transparent)' },
 	{ tag: tags.quote, fontStyle: 'italic', color: 'var(--color-text-maxcontrast)' },
 	{ tag: [tags.processingInstruction, tags.contentSeparator], color: 'var(--color-primary-element)' },
 	{ tag: [tags.labelName, tags.atom, tags.meta], color: 'var(--color-primary-element)' },

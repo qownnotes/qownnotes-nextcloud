@@ -36,19 +36,20 @@ const theme = EditorView.theme({
 	'&.cm-focused': {
 		outline: 'none',
 	},
+	// Line backgrounds are drawn above the selection layer, so they must be translucent to keep the selection visible
 	'.cm-activeLine': {
-		backgroundColor: 'var(--color-background-hover)',
+		backgroundColor: 'color-mix(in srgb, var(--color-main-text) 4%, transparent)',
 	},
 	'&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
-		backgroundColor: 'var(--color-primary-element-light) !important',
+		backgroundColor: 'color-mix(in srgb, var(--color-primary-element) 35%, transparent) !important',
 	},
 	'.cm-line.cm-qn-code-block': {
 		padding: '0 8px',
 		fontFamily: 'var(--font-face-monospace, monospace)',
-		backgroundColor: 'var(--color-background-dark)',
+		backgroundColor: 'color-mix(in srgb, var(--color-main-text) 6%, transparent)',
 	},
 	'.cm-line.cm-qn-code-block.cm-activeLine': {
-		backgroundColor: 'var(--color-background-darker)',
+		backgroundColor: 'color-mix(in srgb, var(--color-main-text) 10%, transparent)',
 	},
 	'.cm-qn-code-block-first': {
 		borderStartStartRadius: 'var(--border-radius)',

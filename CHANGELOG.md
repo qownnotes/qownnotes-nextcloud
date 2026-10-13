@@ -20,6 +20,8 @@
 - Note links in angle brackets like `<Journal.md>` or `<Work/My note.md>` are rendered as links in the preview and
   highlighted as links in the editor, like in QOwnNotes Desktop, so they can be followed like other note links;
   `<Journal.md#Heading>` also jumps to the heading
+- The selected text in the editor is clearly visible again, also in the current line, in code blocks and in inline
+  code, because the selection is shown in a stronger color and the line backgrounds no longer cover it
 
 ## 26.10.0
 
