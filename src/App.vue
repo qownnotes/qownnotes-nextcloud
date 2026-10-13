@@ -16,6 +16,7 @@
 
 		<NcAppContent
 			:pageHeading="t('qownnotes', 'Notes')"
+			:pageTitle="pageTitle"
 			:showDetails="selectedNoteId !== null"
 			@update:showDetails="onShowDetails">
 			<template #list>
@@ -132,6 +133,16 @@ export default {
 
 	computed: {
 		...mapStores(useNotesStore, useFoldersStore, useTagsStore, useSettingsStore),
+
+		/**
+		 * NcAppContent builds the title from pageHeading and the localized app name, but its lookup of the
+		 * localized name returns the ref provided by NcContent (@nextcloud/vue 9.13), so the title would
+		 * contain "[object Object]". With pageTitle, the app name is not looked up.
+		 */
+		pageTitle() {
+			const title = this.selectedNote?.title || t('qownnotes', 'Notes')
+			return title + ' - ' + t('qownnotes', 'QOwnNotes')
+		},
 
 		selectedFolder() {
 			return routeFolder(this.$route)

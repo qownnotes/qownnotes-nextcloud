@@ -23,6 +23,8 @@ test.beforeEach(async ({ page }) => {
 test('create a note, edit it and reload the page', async ({ page }) => {
 	const title = uniqueName('E2E note')
 	await page.goto(`${APP_PATH}/`)
+	await expect(page).toHaveTitle(/^Notes - QOwnNotes - /u)
+	await expect(page).not.toHaveTitle(/object/u)
 	await page.getByRole('button', { name: 'New note' }).first().click()
 	await expect(page).toHaveURL(/\/note\/\d+/u)
 
@@ -33,6 +35,7 @@ test('create a note, edit it and reload the page', async ({ page }) => {
 	await page.keyboard.type(`# ${title}\n\nWritten in the browser`)
 	await expect(page.locator('.note-editor__title h2')).toHaveText(title)
 	await expect(page.locator('.note-editor__status')).toHaveText('')
+	await expect(page).toHaveTitle(new RegExp(`^${title} - QOwnNotes - `, 'u'))
 
 	await page.reload()
 	await expect(page.locator('.cm-content')).toContainText('Written in the browser')
