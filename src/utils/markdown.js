@@ -29,6 +29,15 @@ const markdownIt = new MarkdownIt({
 	},
 }).use(taskLists, { enabled: true, label: true })
 
+// The source line of each block, so the scrolling of the editor and the preview can be linked
+markdownIt.core.ruler.push('source_lines', (state) => {
+	for (const token of state.tokens) {
+		if (token.map && token.nesting !== -1) {
+			token.attrSet('data-source-line', String(token.map[0]))
+		}
+	}
+})
+
 /**
  * Renders the note text to sanitized HTML; relative links to media files and attachments are served by the
  * attachment API

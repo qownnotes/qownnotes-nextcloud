@@ -45,8 +45,8 @@ describe('markdown', () => {
 		const content = '```python\ndef answer():\n    return 42  # comment\n```\n\n```unknown\n<b>\n```'
 		const loaded = vi.fn()
 		const before = renderMarkdown(content, { ...options, onCodeLanguagesLoaded: loaded })
-		expect(before).toContain('<code class="language-python">def answer():')
-		expect(before).toContain('<code class="language-unknown">&lt;b&gt;')
+		expect(before).toContain('class="language-python">def answer():')
+		expect(before).toContain('class="language-unknown">&lt;b&gt;')
 		await vi.waitFor(() => expect(loaded).toHaveBeenCalledOnce())
 		expect(languages.find((language) => language.name === 'Python').support).toBeDefined()
 
@@ -54,7 +54,7 @@ describe('markdown', () => {
 		expect(after).toContain('<span class="qn-code-keyword">def</span>')
 		expect(after).toContain('<span class="qn-code-number">42</span>')
 		expect(after).toContain('<span class="qn-code-comment"># comment</span>')
-		expect(after).toContain('<code class="language-unknown">&lt;b&gt;')
+		expect(after).toContain('class="language-unknown">&lt;b&gt;')
 		expect(loaded).toHaveBeenCalledOnce()
 	})
 

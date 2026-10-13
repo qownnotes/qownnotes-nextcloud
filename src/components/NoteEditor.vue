@@ -90,13 +90,17 @@
 				ref="editor"
 				v-model="content"
 				:readonly="note.readonly"
-				:placeholder="t('qownnotes', 'Write your note …')" />
+				:placeholder="t('qownnotes', 'Write your note …')"
+				@scroll="onEditorScroll" />
 			<NotePreview
 				v-if="preview"
+				ref="preview"
 				:content="content"
 				:noteId="noteId"
 				:readonly="note.readonly"
-				@toggleTask="onToggleTask" />
+				@toggleTask="onToggleTask"
+				@scroll="onPreviewScroll"
+				@rendered="onPreviewRendered" />
 		</div>
 
 		<input
@@ -296,6 +300,22 @@ export default {
 		'note.title': function(title) {
 			this.newTitle = title
 		},
+
+		// The editor and the preview that are shown instead of each other, or beside each other, keep the scroll position
+		preview: {
+			handler: 'restoreScrollLine',
+			flush: 'post',
+		},
+
+		sideBySidePreview: {
+			handler: 'restoreScrollLine',
+			flush: 'post',
+		},
+	},
+
+	created() {
+		// The line at the top of the editor or the preview, the panes are scrolled together like in QOwnNotes Desktop
+		this.scrollLine = 0
 	},
 
 	mounted() {
@@ -411,6 +431,26 @@ export default {
 
 		togglePreview() {
 			this.settingsStore.setLocal('preview', !this.preview)
+		},
+
+		onEditorScroll(line) {
+			this.scrollLine = line
+			this.$refs.preview?.scrollToLine(line)
+		},
+
+		onPreviewScroll(line) {
+			this.scrollLine = line
+			this.$refs.editor?.scrollToLine(line)
+		},
+
+		// The preview changes its height while the note is edited
+		onPreviewRendered() {
+			this.$refs.preview?.scrollToLine(this.scrollLine)
+		},
+
+		restoreScrollLine() {
+			this.$refs.editor?.revealLine(this.scrollLine)
+			this.$refs.preview?.scrollToLine(this.scrollLine)
 		},
 
 		onToggleTask(index) {

@@ -4,13 +4,19 @@
 -->
 
 <template>
-	<!-- eslint-disable-next-line vue/no-v-html -- sanitized by DOMPurify in renderMarkdown -->
-	<div class="note-preview" @click="onClick" v-html="html" />
+	<!-- eslint-disable vue/no-v-html -- sanitized by DOMPurify in renderMarkdown -->
+	<div
+		ref="root"
+		class="note-preview"
+		@click="onClick"
+		@scroll.passive="onScroll"
+		v-html="html" />
 </template>
 
 <script>
 import { API_BASE } from '../api.js'
 import { renderMarkdown } from '../utils/markdown.js'
+import { lineOfPreviewOffset, previewAnchors, previewOffsetOfLine } from '../utils/scrollSync.js'
 
 export default {
 	name: 'NotePreview',
@@ -32,7 +38,7 @@ export default {
 		},
 	},
 
-	emits: ['toggleTask'],
+	emits: ['toggleTask', 'scroll', 'rendered'],
 
 	data() {
 		return {
@@ -43,6 +49,7 @@ export default {
 
 	computed: {
 		html() {
+			// Rendered again when the languages are loaded
 			this.codeLanguagesLoaded
 			return renderMarkdown(this.content, {
 				apiBase: API_BASE,
@@ -54,7 +61,52 @@ export default {
 		},
 	},
 
+	created() {
+		// The scroll position set by scrollToLine, its scroll event is not passed on
+		this.expectedScrollTop = null
+	},
+
+	updated() {
+		this.$emit('rendered')
+	},
+
 	methods: {
+		/**
+		 * The source line at the top of the preview
+		 *
+		 * @return {number} the line (0-based, with a fraction)
+		 */
+		scrollLine() {
+			const { scrollTop, scrollHeight, clientHeight } = this.$refs.root
+			const lineCount = this.content.split('\n').length
+			if (scrollTop > 0 && scrollTop + clientHeight >= scrollHeight - 1) {
+				return lineCount
+			}
+			return lineOfPreviewOffset(previewAnchors(this.$refs.root), scrollTop, lineCount, scrollHeight)
+		},
+
+		/**
+		 * Scrolls a source line to the top of the preview
+		 *
+		 * @param {number} line the line (0-based, with a fraction), see scrollLine
+		 */
+		scrollToLine(line) {
+			const lineCount = this.content.split('\n').length
+			const root = this.$refs.root
+			root.scrollTop = line >= lineCount
+				? root.scrollHeight
+				: previewOffsetOfLine(previewAnchors(root), line, lineCount, root.scrollHeight)
+			this.expectedScrollTop = root.scrollTop
+		},
+
+		onScroll() {
+			const expected = this.expectedScrollTop
+			this.expectedScrollTop = null
+			if (expected === null || Math.abs(this.$refs.root.scrollTop - expected) > 1) {
+				this.$emit('scroll', this.scrollLine())
+			}
+		},
+
 		onClick(event) {
 			const target = event.target
 			if (!(target instanceof HTMLInputElement) || !target.classList.contains('task-list-item-checkbox')) {
@@ -62,7 +114,7 @@ export default {
 			}
 			event.preventDefault()
 			if (!this.readonly) {
-				const checkboxes = [...this.$el.querySelectorAll('input.task-list-item-checkbox')]
+				const checkboxes = [...this.$refs.root.querySelectorAll('input.task-list-item-checkbox')]
 				this.$emit('toggleTask', checkboxes.indexOf(target))
 			}
 		},
@@ -72,6 +124,9 @@ export default {
 
 <style scoped>
 .note-preview {
+	box-sizing: border-box;
+	height: 100%;
+	overflow: auto;
 	padding: 16px 4px;
 	line-height: 1.6;
 	overflow-wrap: anywhere;

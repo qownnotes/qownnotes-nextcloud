@@ -7,6 +7,9 @@
 - Links to attachments like `[Audio recording](attachments/audio.m4a)` or `[prompt.md](attachments/prompt.md)`
   open in a new browser tab instead of being downloaded, so audio, video, PDF and text files can be viewed right away
   (`GET attachment/{noteId}?path=…&inline=1` of the Notes API)
+- The editor and the preview scroll together when they are shown side by side, like in QOwnNotes Desktop;
+  the source lines of the rendered blocks keep headings, code blocks and images aligned, and switching between
+  the editor and the preview keeps the scroll position
 
 ## 26.10.0
 
