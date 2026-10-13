@@ -46,6 +46,10 @@
   - Tag responses respect read-only shares even when permissions change without a new database ETag
   - Tag keys use Desktop and Android base names without suffixes; repeated links do not upload, and changed tag transactions reconcile missing, restored and expired links
   - Release preflight checks versions, release notes, packaging inputs and app store screenshots locally and in CI; signing rejects missing inputs
+  - Polished web interface and dialogs for desktop and mobile in light and dark themes: notes selected with
+    Ctrl/Shift+click are now highlighted, the editor actions stay beside long titles, the settings dialog keeps
+    Save and Cancel visible, the deleted notes dialog stacks its preview on small screens and selects the next
+    note after a restore, and long tag names wrap in the tag color dialog
   - Monochrome app icon based on the QOwnNotes icon (note sheet with header bar, cloud and folded corner)
   - Documentation of the APIs (`docs/api/`), the handling of `notes.sqlite` and a migration guide for
     users of the QOwnNotesAPI and Nextcloud Notes apps

@@ -11,69 +11,71 @@
 					<h2 :title="note.title">
 						{{ note.title }}
 					</h2>
-					<span v-if="note.category" class="note-editor__category">
+					<span v-if="note.category" class="note-editor__category" :title="note.category">
 						<FolderOutline :size="16" />
-						{{ note.category }}
+						<span>{{ note.category }}</span>
+					</span>
+					<span class="note-editor__status" :class="'note-editor__status--' + status" role="status">
+						{{ statusText }}
 					</span>
 				</div>
-				<span class="note-editor__status" :class="'note-editor__status--' + status">
-					{{ statusText }}
-				</span>
-				<NcButton
-					variant="tertiary"
-					:aria-label="note.favorite ? t('qownnotes', 'Remove from favorites') : t('qownnotes', 'Add to favorites')"
-					:title="note.favorite ? t('qownnotes', 'Remove from favorites') : t('qownnotes', 'Add to favorites')"
-					@click="toggleFavorite">
-					<template #icon>
-						<Star v-if="note.favorite" :size="20" class="note-editor__favorite" />
-						<StarOutline v-else :size="20" />
-					</template>
-				</NcButton>
-				<NcButton
-					variant="tertiary"
-					:pressed="preview"
-					:aria-label="t('qownnotes', 'Preview')"
-					:title="t('qownnotes', 'Preview')"
-					class="note-editor__preview-toggle"
-					@click="togglePreview">
-					<template #icon>
-						<EyeOutline :size="20" />
-					</template>
-				</NcButton>
-				<NcButton
-					variant="tertiary"
-					:pressed="detailsOpen"
-					:aria-label="t('qownnotes', 'Details and versions')"
-					:title="t('qownnotes', 'Details and versions')"
-					class="note-editor__details-toggle"
-					@click="$emit('toggleDetails')">
-					<template #icon>
-						<InformationOutline :size="20" />
-					</template>
-				</NcButton>
-				<NcActions>
-					<NcActionInput
-						v-if="!note.readonly"
-						v-model="newTitle"
-						:label="t('qownnotes', 'Rename note')"
-						@submit="rename">
+				<div class="note-editor__actions" role="group" :aria-label="t('qownnotes', 'Note actions')">
+					<NcButton
+						variant="tertiary"
+						:aria-label="note.favorite ? t('qownnotes', 'Remove from favorites') : t('qownnotes', 'Add to favorites')"
+						:title="note.favorite ? t('qownnotes', 'Remove from favorites') : t('qownnotes', 'Add to favorites')"
+						@click="toggleFavorite">
 						<template #icon>
-							<PencilOutline :size="20" />
+							<Star v-if="note.favorite" :size="20" class="note-editor__favorite" />
+							<StarOutline v-else :size="20" />
 						</template>
-					</NcActionInput>
-					<NcActionButton v-if="!note.readonly" closeAfterClick @click="$refs.fileInput.click()">
+					</NcButton>
+					<NcButton
+						variant="tertiary"
+						:pressed="preview"
+						:aria-label="t('qownnotes', 'Preview')"
+						:title="t('qownnotes', 'Preview')"
+						class="note-editor__preview-toggle"
+						@click="togglePreview">
 						<template #icon>
-							<ImagePlus :size="20" />
+							<EyeOutline :size="20" />
 						</template>
-						{{ t('qownnotes', 'Insert image or attachment') }}
-					</NcActionButton>
-					<NcActionButton v-if="!note.readonly" closeAfterClick @click="deleteDialogOpen = true">
+					</NcButton>
+					<NcButton
+						variant="tertiary"
+						:pressed="detailsOpen"
+						:aria-label="t('qownnotes', 'Details and versions')"
+						:title="t('qownnotes', 'Details and versions')"
+						class="note-editor__details-toggle"
+						@click="$emit('toggleDetails')">
 						<template #icon>
-							<Delete :size="20" />
+							<InformationOutline :size="20" />
 						</template>
-						{{ t('qownnotes', 'Delete note') }}
-					</NcActionButton>
-				</NcActions>
+					</NcButton>
+					<NcActions>
+						<NcActionInput
+							v-if="!note.readonly"
+							v-model="newTitle"
+							:label="t('qownnotes', 'Rename note')"
+							@submit="rename">
+							<template #icon>
+								<PencilOutline :size="20" />
+							</template>
+						</NcActionInput>
+						<NcActionButton v-if="!note.readonly" closeAfterClick @click="$refs.fileInput.click()">
+							<template #icon>
+								<ImagePlus :size="20" />
+							</template>
+							{{ t('qownnotes', 'Insert image or attachment') }}
+						</NcActionButton>
+						<NcActionButton v-if="!note.readonly" closeAfterClick @click="deleteDialogOpen = true">
+							<template #icon>
+								<Delete :size="20" />
+							</template>
+							{{ t('qownnotes', 'Delete note') }}
+						</NcActionButton>
+					</NcActions>
+				</div>
 			</div>
 			<NoteTagEditor v-if="tagsStore.available" :noteId="noteId" :writable="tagsWritable" />
 		</div>
@@ -245,6 +247,9 @@ export default {
 		},
 
 		statusText() {
+			if (this.note.readonly) {
+				return t('qownnotes', 'Read-only')
+			}
 			return {
 				saving: t('qownnotes', 'Saving …'),
 				error: t('qownnotes', 'Not saved'),
@@ -476,6 +481,7 @@ export default {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
+	min-width: 0;
 	padding: 0 16px 0 calc(var(--default-clickable-area) + 8px);
 	container-type: inline-size;
 }
@@ -483,14 +489,23 @@ export default {
 .note-editor__header {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding-top: 8px;
+	gap: 12px;
+	padding: 12px 0;
+	border-bottom: 1px solid var(--color-border);
 }
 
 .note-editor__title-row {
 	display: flex;
 	align-items: center;
+	gap: 8px;
+}
+
+.note-editor__actions {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
 	gap: 4px;
+	margin-inline-start: auto;
 }
 
 .note-editor__title {
@@ -507,15 +522,28 @@ export default {
 }
 
 .note-editor__category {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
 	gap: 4px;
 	color: var(--color-text-maxcontrast);
 }
 
-.note-editor__status {
-	color: var(--color-text-maxcontrast);
+.note-editor__category > span {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.note-editor__category :deep(.material-design-icon) {
+	flex-shrink: 0;
+}
+
+.note-editor__status {
+	display: block;
+	color: var(--color-text-maxcontrast);
+	font-size: 0.9em;
+	overflow-wrap: anywhere;
 }
 
 .note-editor__status--error {
@@ -547,8 +575,8 @@ export default {
 }
 
 .note-editor__body--split > .note-preview {
-	border-left: 1px solid var(--color-border);
-	padding-left: 16px;
+	border-inline-start: 1px solid var(--color-border);
+	padding-inline-start: 16px;
 }
 
 @container (max-width: 600px) {
@@ -558,16 +586,23 @@ export default {
 	}
 
 	.note-editor__body--split > .note-preview {
-		border-left: none;
+		border-inline-start: none;
 		border-top: 1px solid var(--color-border);
-		padding-left: 4px;
+		padding-inline-start: 4px;
 	}
 }
 
 .note-editor__conflict-legend {
 	display: flex;
-	gap: 16px;
-	margin: 8px 0;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	margin: 16px 0;
+}
+
+.note-editor__conflict-legend ins,
+.note-editor__conflict-legend del {
+	padding: 2px 8px;
+	border-radius: var(--border-radius-element);
 }
 
 .note-editor__conflict-legend ins {

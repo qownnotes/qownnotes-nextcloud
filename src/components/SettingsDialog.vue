@@ -7,31 +7,37 @@
 	<NcAppSettingsDialog
 		:open="open"
 		:name="t('qownnotes', 'QOwnNotes settings')"
+		class="settings-dialog"
 		showNavigation
 		@update:open="onOpenChanged">
 		<NcAppSettingsSection id="qownnotes-settings-folder" :name="t('qownnotes', 'Note folder')">
-			<NcTextField
-				v-model="form.notesPath"
-				:label="t('qownnotes', 'Path of the note folder')"
-				:helperText="t('qownnotes', 'Relative to your files, used by QOwnNotes Android and the web interface')" />
-			<NcTextField
-				v-model="form.fileSuffix"
-				:label="t('qownnotes', 'File extension of new notes')"
-				:helperText="t('qownnotes', 'For example .md or .txt')" />
-			<NcCheckboxRadioSwitch
-				v-model="form.noteHeaderStyle"
-				value="atx"
-				name="noteHeaderStyle"
-				type="radio">
-				{{ t('qownnotes', 'New notes start with a "# Title" headline') }}
-			</NcCheckboxRadioSwitch>
-			<NcCheckboxRadioSwitch
-				v-model="form.noteHeaderStyle"
-				value="setext"
-				name="noteHeaderStyle"
-				type="radio">
-				{{ t('qownnotes', 'New notes start with an underlined title') }}
-			</NcCheckboxRadioSwitch>
+			<div class="settings-dialog__fields">
+				<NcTextField
+					v-model="form.notesPath"
+					:label="t('qownnotes', 'Path of the note folder')"
+					:helperText="t('qownnotes', 'Relative to your files, used by QOwnNotes Android and the web interface')" />
+				<NcTextField
+					v-model="form.fileSuffix"
+					:label="t('qownnotes', 'File extension of new notes')"
+					:helperText="t('qownnotes', 'For example .md or .txt')" />
+			</div>
+			<fieldset class="settings-dialog__radios">
+				<legend>{{ t('qownnotes', 'Title style for new notes') }}</legend>
+				<NcCheckboxRadioSwitch
+					v-model="form.noteHeaderStyle"
+					value="atx"
+					name="noteHeaderStyle"
+					type="radio">
+					{{ t('qownnotes', 'New notes start with a "# Title" headline') }}
+				</NcCheckboxRadioSwitch>
+				<NcCheckboxRadioSwitch
+					v-model="form.noteHeaderStyle"
+					value="setext"
+					name="noteHeaderStyle"
+					type="radio">
+					{{ t('qownnotes', 'New notes start with an underlined title') }}
+				</NcCheckboxRadioSwitch>
+			</fieldset>
 		</NcAppSettingsSection>
 
 		<NcAppSettingsSection id="qownnotes-settings-subfolders" :name="t('qownnotes', 'Subfolders')">
@@ -40,6 +46,7 @@
 			</NcCheckboxRadioSwitch>
 			<NcTextField
 				v-model="form.ignoreNoteSubFolders"
+				:disabled="!form.subfoldersEnabled"
 				:label="t('qownnotes', 'Ignored subfolders')"
 				:helperText="t('qownnotes', 'Regular expressions, separated by ;, like in QOwnNotes Desktop')" />
 			<NcCheckboxRadioSwitch v-model="form.rewriteMediaLinks" type="switch">
@@ -72,8 +79,14 @@
 		</NcAppSettingsSection>
 
 		<div class="settings-dialog__buttons">
+			<NcButton :disabled="saving" @click="onOpenChanged(false)">
+				{{ t('qownnotes', 'Cancel') }}
+			</NcButton>
 			<NcButton variant="primary" :disabled="saving" @click="save">
-				{{ t('qownnotes', 'Save') }}
+				<template v-if="saving" #icon>
+					<NcLoadingIcon :size="20" />
+				</template>
+				{{ saving ? t('qownnotes', 'Saving …') : t('qownnotes', 'Save') }}
 			</NcButton>
 		</div>
 	</NcAppSettingsDialog>
@@ -87,6 +100,7 @@ import NcAppSettingsDialog from '@nextcloud/vue/components/NcAppSettingsDialog'
 import NcAppSettingsSection from '@nextcloud/vue/components/NcAppSettingsSection'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import { errorMessage } from '../api.js'
 import { useSettingsStore } from '../stores/settings.js'
@@ -100,6 +114,7 @@ export default {
 		NcAppSettingsSection,
 		NcButton,
 		NcCheckboxRadioSwitch,
+		NcLoadingIcon,
 		NcTextField,
 	},
 
@@ -165,9 +180,47 @@ export default {
 </script>
 
 <style scoped>
+.settings-dialog :deep(.app-settings-section) {
+	--app-settings-section-content-gap: 16px;
+}
+
+.settings-dialog__fields {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.settings-dialog__radios {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.settings-dialog__radios legend {
+	margin-bottom: 8px;
+	padding-inline: var(--app-settings-section-text-offset);
+	font-weight: bold;
+}
+
+.settings-hint {
+	margin: 0;
+	padding-inline: var(--app-settings-section-text-offset);
+	color: var(--color-text-maxcontrast);
+	line-height: 1.6;
+	overflow-wrap: anywhere;
+}
+
 .settings-dialog__buttons {
+	position: sticky;
+	bottom: 0;
+	z-index: 1;
 	display: flex;
 	justify-content: flex-end;
-	padding: 8px 0;
+	gap: 8px;
+	margin-top: 24px;
+	padding: 12px 0;
+	border-top: 1px solid var(--color-border);
+	background-color: var(--color-main-background);
 }
 </style>

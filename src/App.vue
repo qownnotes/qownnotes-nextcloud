@@ -41,6 +41,7 @@
 				@deleted="onNoteDeleted" />
 			<NcEmptyContent
 				v-else-if="loadError"
+				class="app__empty"
 				:name="t('qownnotes', 'The notes could not be loaded')"
 				:description="loadError">
 				<template #icon>
@@ -49,6 +50,7 @@
 			</NcEmptyContent>
 			<NcEmptyContent
 				v-else-if="notesStore.loaded"
+				class="app__empty"
 				:name="t('qownnotes', 'No note selected')"
 				:description="t('qownnotes', 'Select a note or create a new one')">
 				<template #icon>
@@ -307,3 +309,9 @@ export default {
 	},
 }
 </script>
+
+<style scoped>
+.app__empty {
+	height: 100%;
+}
+</style>

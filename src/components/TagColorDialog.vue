@@ -9,7 +9,9 @@
 		:buttons="buttons"
 		class="tag-color-dialog"
 		@update:open="$emit('close')">
-		<p>{{ t('qownnotes', 'Like in QOwnNotes Desktop, the tag can have another color in dark themes.') }}</p>
+		<p class="tag-color-dialog__hint">
+			{{ t('qownnotes', 'Like in QOwnNotes Desktop, the tag can have another color in dark themes.') }}
+		</p>
 		<div v-for="field in fields" :key="field.key" class="tag-color-dialog__row">
 			<span class="tag-color-dialog__label">{{ field.label }}</span>
 			<NcColorPicker v-model="colors[field.key]" advancedFields>
@@ -26,7 +28,7 @@
 			<NcButton
 				v-if="colors[field.key]"
 				variant="tertiary"
-				:aria-label="t('qownnotes', 'Remove color')"
+				:aria-label="t('qownnotes', 'Remove color ({label})', { label: field.label })"
 				:title="t('qownnotes', 'Remove color')"
 				@click="colors[field.key] = null">
 				<template #icon>
@@ -99,15 +101,39 @@ export default {
 </script>
 
 <style scoped>
+.tag-color-dialog :deep(.dialog__name) {
+	flex-shrink: 0;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+
+/* Long tag names wrap instead of running under the close button; on small screens NcDialog already
+   aligns the name to the start and keeps space for the close button */
+@media (min-width: 513px) {
+	.tag-color-dialog :deep(.dialog__name) {
+		padding-block: 8px;
+		padding-inline: calc(var(--default-clickable-area, 44px) + 4px);
+	}
+}
+
+.tag-color-dialog__hint {
+	margin-bottom: 20px;
+	color: var(--color-text-maxcontrast);
+	line-height: 1.6;
+}
+
 .tag-color-dialog__row {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto var(--default-clickable-area, 44px);
 	align-items: center;
 	gap: 8px;
-	margin: 8px 0;
+	padding: 12px 0;
+	border-top: 1px solid var(--color-border);
 }
 
 .tag-color-dialog__label {
-	min-width: 180px;
+	overflow-wrap: anywhere;
+	font-weight: bold;
 }
 
 .tag-color-dialog__swatch {
@@ -120,5 +146,15 @@ export default {
 
 .tag-color-dialog__swatch--empty {
 	background: repeating-linear-gradient(45deg, transparent 0 3px, var(--color-border-dark) 3px 4px);
+}
+
+@media (max-width: 480px) {
+	.tag-color-dialog__row {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.tag-color-dialog__label {
+		grid-column: 1 / -1;
+	}
 }
 </style>

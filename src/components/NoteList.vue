@@ -22,7 +22,7 @@
 				<h2 class="note-list__heading">
 					{{ heading }}
 				</h2>
-				<NcActions>
+				<NcActions :aria-label="t('qownnotes', 'Note list actions')">
 					<NcActionButton closeAfterClick @click="$emit('newNote')">
 						<template #icon>
 							<Plus :size="20" />
@@ -47,7 +47,8 @@
 		<NcLoadingIcon v-if="loading" :size="32" class="note-list__loading" />
 		<NcEmptyContent
 			v-else-if="notes.length === 0"
-			:name="t('qownnotes', 'No notes found')">
+			:name="t('qownnotes', 'No notes found')"
+			:description="search ? t('qownnotes', 'Try another search term or check your filters') : t('qownnotes', 'Create a note or choose another folder or tag')">
 			<template #icon>
 				<NoteTextOutline />
 			</template>
@@ -229,6 +230,7 @@ export default {
 	top: 0;
 	z-index: 1;
 	padding: 8px 8px 0 calc(var(--default-clickable-area) + 8px);
+	border-bottom: 1px solid var(--color-border);
 	background-color: var(--color-main-background);
 }
 
@@ -236,9 +238,11 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	gap: 8px;
 }
 
 .note-list__heading {
+	min-width: 0;
 	margin: 8px 0;
 	font-size: 1.2em;
 	overflow: hidden;
@@ -250,8 +254,18 @@ export default {
 	margin-top: 32px;
 }
 
-.note-list__item--selected :deep(.list-item) {
+/* NcListItem doesn't receive this component's scope ID, so the selector starts with :deep() */
+:deep(.note-list__item--selected:not(.list-item__wrapper--active) .list-item) {
 	background-color: var(--color-primary-element-light);
+}
+
+.list-item__wrapper--active .note-list__category {
+	color: inherit;
+	opacity: 0.8;
+}
+
+.list-item__wrapper--active .note-list__tag:not([style]) {
+	border-color: currentColor;
 }
 
 .note-list__favorite {
@@ -265,6 +279,11 @@ export default {
 
 .note-list__tag {
 	display: inline-block;
+	max-width: 8em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: middle;
 	margin-inline-end: 4px;
 	padding: 0 6px;
 	border: 1px solid var(--color-border-dark);

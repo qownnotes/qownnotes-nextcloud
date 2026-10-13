@@ -8,7 +8,7 @@
 		<span class="bulk-actions__count">
 			{{ n('qownnotes', '{count} note selected', '{count} notes selected', noteIds.length, { count: noteIds.length }) }}
 		</span>
-		<NcActions :menuName="t('qownnotes', 'Actions')">
+		<NcActions :aria-label="t('qownnotes', 'Actions')">
 			<NcActionInput
 				v-if="tagsStore.available && tagsWritable"
 				v-model="newTag"
@@ -227,6 +227,10 @@ export default {
 
 .bulk-actions__count {
 	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-weight: bold;
 }
 </style>

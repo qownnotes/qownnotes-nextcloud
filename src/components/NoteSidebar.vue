@@ -73,6 +73,10 @@
 							:aria-expanded="expanded === version.timestamp ? 'true' : 'false'"
 							class="note-sidebar__version-toggle"
 							@click="expanded = expanded === version.timestamp ? null : version.timestamp">
+							<template #icon>
+								<ChevronDown v-if="expanded === version.timestamp" :size="20" />
+								<ChevronRight v-else :size="20" />
+							</template>
 							<NcDateTime :timestamp="version.timestamp * 1000" />
 						</NcButton>
 						<NcButton
@@ -110,6 +114,8 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcDateTime from '@nextcloud/vue/components/NcDateTime'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
+import ChevronDown from 'vue-material-design-icons/ChevronDown.vue'
+import ChevronRight from 'vue-material-design-icons/ChevronRight.vue'
 import FolderOpen from 'vue-material-design-icons/FolderOpen.vue'
 import History from 'vue-material-design-icons/History.vue'
 import InformationOutline from 'vue-material-design-icons/InformationOutline.vue'
@@ -122,6 +128,8 @@ export default {
 	name: 'NoteSidebar',
 
 	components: {
+		ChevronDown,
+		ChevronRight,
 		DiffView,
 		FolderOpen,
 		History,
@@ -218,13 +226,25 @@ export default {
 <style scoped>
 .note-sidebar__info {
 	display: grid;
-	grid-template-columns: max-content 1fr;
-	gap: 4px 12px;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 12px 16px;
 	margin-bottom: 16px;
+}
+
+/* Nextcloud styles dt and dd for its own forms (padding, right-aligned labels) */
+.note-sidebar__info dt,
+.note-sidebar__info dd {
+	margin: 0;
+	padding: 0;
+	text-align: start;
 }
 
 .note-sidebar__info dt {
 	color: var(--color-text-maxcontrast);
+}
+
+.note-sidebar__info dd {
+	overflow-wrap: anywhere;
 }
 
 .note-sidebar__path {
@@ -244,12 +264,24 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	gap: 8px;
+}
+
+.note-sidebar__version-toggle {
+	min-width: 0;
 }
 
 .note-sidebar__legend {
 	display: flex;
-	gap: 16px;
-	margin: 4px 0;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 12px 0;
+}
+
+.note-sidebar__legend ins,
+.note-sidebar__legend del {
+	padding: 2px 8px;
+	border-radius: var(--border-radius-element);
 }
 
 .note-sidebar__legend ins {

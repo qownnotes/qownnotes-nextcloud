@@ -4,9 +4,14 @@
 -->
 
 <template>
-	<!-- eslint-disable-next-line vue/no-v-html -- only <ins> and <del> are kept by DOMPurify -->
-	<pre v-if="html !== null" class="diff-view" v-html="sanitizedHtml" />
-	<pre v-else class="diff-view"><template v-for="(part, index) in parts" :key="index"><ins v-if="part.type === 'insert'">{{ part.text }}</ins><del v-else-if="part.type === 'delete'">{{ part.text }}</del><template v-else>{{ part.text }}</template></template></pre>
+	<!-- eslint-disable vue/no-v-html -- only <ins> and <del> are kept by DOMPurify -->
+	<pre
+		v-if="html !== null"
+		class="diff-view"
+		tabindex="0"
+		v-html="sanitizedHtml" />
+	<!-- eslint-enable vue/no-v-html -->
+	<pre v-else class="diff-view" tabindex="0"><template v-for="(part, index) in parts" :key="index"><ins v-if="part.type === 'insert'">{{ part.text }}</ins><del v-else-if="part.type === 'delete'">{{ part.text }}</del><template v-else>{{ part.text }}</template></template></pre>
 </template>
 
 <script>
@@ -51,13 +56,20 @@ export default {
 .diff-view {
 	max-height: 50vh;
 	margin: 0;
-	padding: 8px;
+	padding: 16px;
+	border: 1px solid var(--color-border);
 	overflow: auto;
 	font-family: var(--font-face-monospace, monospace);
+	line-height: 1.6;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 	background-color: var(--color-background-dark);
 	border-radius: var(--border-radius);
+}
+
+.diff-view:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: -2px;
 }
 
 .diff-view :deep(ins) {
