@@ -2,7 +2,7 @@ name: qownnotes-nextcloud
 
 services:
   app:
-    image: nextcloud:${NEXTCLOUD_VERSION:-33}-apache
+    image: nextcloud:${NEXTCLOUD_VERSION:-35}-apache
     ports:
       - 8081:80
     environment:
