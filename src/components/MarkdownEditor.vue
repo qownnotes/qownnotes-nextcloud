@@ -13,6 +13,7 @@ import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/sea
 import { Compartment, EditorState, Prec } from '@codemirror/state'
 import { drawSelection, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
 import { insertTaskAbove, markdownEditorHighlighting, toggleTaskCheckbox } from '../utils/markdownEditor.js'
+import { createSearchPanel, searchPanelTheme } from '../utils/searchPanel.js'
 
 const theme = EditorView.theme({
 	'&': {
@@ -116,7 +117,8 @@ export default {
 					drawSelection(),
 					highlightActiveLine(),
 					highlightSelectionMatches(),
-					search({ top: true }),
+					search({ top: true, createPanel: createSearchPanel }),
+					searchPanelTheme,
 					Prec.highest(keymap.of([{ key: 'Enter', run: insertTaskAbove }])),
 					keymap.of([
 						{ key: 'Ctrl-Space', run: toggleTaskCheckbox, preventDefault: true },

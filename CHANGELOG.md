@@ -10,6 +10,9 @@
 - The editor and the preview scroll together when they are shown side by side, like in QOwnNotes Desktop;
   the source lines of the rendered blocks keep headings, code blocks and images aligned, and switching between
   the editor and the preview keeps the scroll position
+- Polished search panel of the editor in the Nextcloud style: one compact row with icon buttons, toggles for
+  case, whole words and regular expressions, the number of matches ("2 of 60", "No results"), and a collapsible
+  replace row that is hidden for read-only notes
 
 ## 26.10.0
 
