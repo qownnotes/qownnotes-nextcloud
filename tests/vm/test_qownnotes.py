@@ -263,8 +263,21 @@ def test_notes_api_attachments(node, label):
     # Attachments are resolved relative to the note, also on the v1.4 path used by QOwnNotes Android
     status, headers, body = http(node, "GET", f"{BASE_URL}/index.php/apps/qownnotes/api/v1.4/attachment/{note_id}?path=../../media/image.png", expect=200)
     assert headers["content-type"].startswith("image/png")
+    assert headers["content-disposition"].startswith("attachment;"), headers
     http(node, "GET", f"{API_URL}/attachment/{note_id}?path=../../../First%20note.md", expect=404)
     http(node, "GET", f"{API_URL}/attachment/{note_id}?path=../../../../../etc/passwd", expect=404)
+
+    # The web interface opens linked files in the browser, text files as plain text
+    node.succeed("printf '# Prompt\\n' > /tmp/prompt.md")
+    _, _, body = http(node, "POST", f"{API_URL}/attachment/{note_id}", form={"file": "@/tmp/prompt.md"}, expect=200)
+    assert json.loads(body)["filename"] == "../../attachments/prompt.md", body
+    _, headers, body = http(node, "GET", f"{API_URL}/attachment/{note_id}?path=../../attachments/prompt.md", expect=200)
+    assert headers["content-disposition"].startswith("attachment;") and not headers["content-type"].startswith("text/plain"), headers
+    _, headers, body = http(node, "GET", f"{API_URL}/attachment/{note_id}?path=../../attachments/prompt.md&inline=1", expect=200)
+    assert headers["content-disposition"] == 'inline; filename="prompt.md"', headers
+    assert headers["content-type"] == "text/plain; charset=utf-8", headers
+    assert "media-src 'self'" in headers["content-security-policy"] and "script-src" not in headers["content-security-policy"], headers
+    assert body.startswith("# Prompt"), body
 
     # Only media files and attachments can be deleted
     http(node, "DELETE", f"{API_URL}/attachment/{note_id}?path=../Renamed%20note.md", expect=403)

@@ -29,6 +29,7 @@ use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
+use OCP\AppFramework\Http\EmptyContentSecurityPolicy;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Http\StreamResponse;
@@ -240,8 +241,8 @@ class NotesApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
-	public function getAttachment(int $noteid, string $path = ''): Response {
-		return $this->responder->respond(function () use ($noteid, $path): Response {
+	public function getAttachment(int $noteid, string $path = '', bool $inline = false): Response {
+		return $this->responder->respond(function () use ($noteid, $path, $inline): Response {
 			$userId = $this->responder->getUserId();
 			$file = $this->attachmentService->get($userId, $this->noteService->get($userId, $noteid), $path);
 			$handle = $file->fopen('rb');
@@ -249,9 +250,24 @@ class NotesApiController extends ApiController {
 				throw new \RuntimeException('The attachment can not be read');
 			}
 
+			$mimeType = $this->mimeTypeDetector->getSecureMimeType($file->getMimeType());
+			if ($inline && str_starts_with($mimeType, 'text/')) {
+				// Browsers download text types like text/markdown instead of showing them
+				$mimeType = 'text/plain; charset=utf-8';
+			}
+
 			$response = new StreamResponse($handle);
-			$response->addHeader('Content-Type', $this->mimeTypeDetector->getSecureMimeType($file->getMimeType()));
-			$response->addHeader('Content-Disposition', 'attachment; filename="' . rawurlencode($file->getName()) . '"');
+			if ($inline) {
+				// Media and PDF documents of the browser load the file again, which the default 'none' policy blocks
+				$policy = new EmptyContentSecurityPolicy();
+				$policy->addAllowedMediaDomain("'self'");
+				$policy->addAllowedObjectDomain("'self'");
+				$response->setContentSecurityPolicy($policy);
+			}
+			$response->addHeader('Content-Type', $mimeType);
+			// The web interface opens linked files in the browser (the response keeps Nextcloud's strict
+			// Content-Security-Policy, and getSecureMimeType() turns HTML and SVG into text/plain)
+			$response->addHeader('Content-Disposition', ($inline ? 'inline' : 'attachment') . '; filename="' . rawurlencode($file->getName()) . '"');
 			$response->addHeader('Vary', 'Authorization, Cookie');
 			$response->cacheFor(3600);
 			return $response;

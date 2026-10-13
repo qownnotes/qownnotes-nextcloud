@@ -59,10 +59,11 @@ export function resolveRelativePath(subFolderPath, link) {
  * @param {string} apiBase base URL of the API, e.g. "/index.php/apps/qownnotes/api/v1"
  * @param {number} noteId ID of the note
  * @param {string} link the relative link in the note
+ * @param {boolean} inline whether the browser should show the file instead of downloading it
  * @return {string}
  */
-export function attachmentUrl(apiBase, noteId, link) {
+export function attachmentUrl(apiBase, noteId, link, inline = false) {
 	// Images and download links cannot send the requesttoken header used by axios. Without a CSRF
 	// token, Nextcloud's CORS middleware rejects session authentication and logs the user out.
-	return `${apiBase}/attachment/${noteId}?path=${encodeURIComponent(link.split(/[?#]/u, 1)[0])}&requesttoken=${encodeURIComponent(getRequestToken())}`
+	return `${apiBase}/attachment/${noteId}?path=${encodeURIComponent(link.split(/[?#]/u, 1)[0])}${inline ? '&inline=1' : ''}&requesttoken=${encodeURIComponent(getRequestToken())}`
 }

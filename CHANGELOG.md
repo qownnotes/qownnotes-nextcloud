@@ -4,6 +4,9 @@
 
 - Code blocks are syntax highlighted in the editor and the preview, with colors for light and dark themes;
   in the editor, code blocks are shown in a monospace font on a background like in the preview
+- Links to attachments like `[Audio recording](attachments/audio.m4a)` or `[prompt.md](attachments/prompt.md)`
+  open in a new browser tab instead of being downloaded, so audio, video, PDF and text files can be viewed right away
+  (`GET attachment/{noteId}?path=…&inline=1` of the Notes API)
 
 ## 26.10.0
 

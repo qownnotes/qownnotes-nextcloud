@@ -59,7 +59,7 @@ export function renderMarkdown(content, { apiBase, noteId, onCodeLanguagesLoaded
 	for (const link of template.content.querySelectorAll('a[href]')) {
 		const href = link.getAttribute('href')
 		if (isRelativeLink(href)) {
-			link.setAttribute('href', attachmentUrl(apiBase, noteId, href))
+			link.setAttribute('href', attachmentUrl(apiBase, noteId, href, true))
 		}
 		if (!href.startsWith('#')) {
 			link.setAttribute('target', '_blank')
