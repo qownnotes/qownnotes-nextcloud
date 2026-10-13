@@ -106,9 +106,13 @@ export default {
 	list-style: none;
 }
 
+/* Nextcloud styles checkboxes like input fields (36px high) */
 .note-preview :deep(.task-list-item-checkbox) {
+	height: auto;
 	min-height: auto;
+	margin-block: 0;
 	margin-inline: -1.4em 0.4em;
+	vertical-align: middle;
 	cursor: pointer;
 }
 
