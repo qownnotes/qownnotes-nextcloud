@@ -61,4 +61,16 @@ describe('note links', () => {
 		expect(linkAt(state, doc.indexOf('See'))).toBeNull()
 		expect(linkAt(state, doc.indexOf('ref'))).toBeNull()
 	})
+
+	it('finds links in angle brackets at a position of the editor', () => {
+		const doc = 'See <Journal.md> and <Work/My note.md#Heading>, [x](<Other note.md>) `<Code.md>` <a@b.md>'
+		const state = EditorState.create({ doc, extensions: markdownEditorHighlighting() })
+		expect(linkAt(state, doc.indexOf('<Journal'))).toBe('Journal.md')
+		expect(linkAt(state, doc.indexOf('Journal'))).toBe('Journal.md')
+		expect(linkAt(state, doc.indexOf('note.md#'))).toBe('Work/My note.md#Heading')
+		expect(linkAt(state, doc.indexOf('Other'))).toBe('Other note.md')
+		expect(linkAt(state, doc.indexOf('Code'))).toBeNull()
+		expect(linkAt(state, doc.indexOf('a@b'))).toBe('mailto:a@b.md')
+		expect(findLinkedNote(notes, '', parseLink('Work/Project A.md#Heading').path)?.id).toBe(2)
+	})
 })

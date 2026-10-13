@@ -17,6 +17,9 @@
   in the editor, like in QOwnNotes Desktop; Ctrl+Space follows the link at the cursor. The linked note opens relative
   to the subfolder of the current note, and the fragment jumps to its heading (URL-encoded heading text or
   `#heading-anchor`), also for headings of the same note. Other files and web pages open in a new browser tab
+- Note links in angle brackets like `<Journal.md>` or `<Work/My note.md>` are rendered as links in the preview and
+  highlighted as links in the editor, like in QOwnNotes Desktop, so they can be followed like other note links;
+  `<Journal.md#Heading>` also jumps to the heading
 
 ## 26.10.0
 

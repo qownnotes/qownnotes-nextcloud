@@ -21,6 +21,20 @@ describe('markdown', () => {
 		expect(html).toContain('href="https://example.com" data-href="https://example.com" target="_blank" rel="noopener noreferrer"')
 	})
 
+	it('renders links to notes in angle brackets like QOwnNotes Desktop', () => {
+		const html = renderMarkdown('See <Journal.md>, <Work/My note.md#Second%20heading> and <attachments/a.pdf>', options)
+		expect(html).toContain('data-href="Journal.md" target="_blank" rel="noopener noreferrer">Journal.md</a>')
+		expect(html).toContain('data-href="Work/My%20note.md#Second%20heading" target="_blank" rel="noopener noreferrer">Work/My note.md#Second%20heading</a>')
+		expect(html).toContain('data-href="attachments/a.pdf"')
+
+		const other = renderMarkdown('`<Code.md>` <https://example.com/a.md> <user@example.com> <b>bold</b>\n\n    <Block.md>', options)
+		expect(other).toContain('<code>&lt;Code.md&gt;</code>')
+		expect(other).toContain('<code>&lt;Block.md&gt;\n</code>')
+		expect(other).toContain('data-href="https://example.com/a.md"')
+		expect(other).toContain('href="mailto:user@example.com"')
+		expect(other).toContain('<b>bold</b>')
+	})
+
 	it('does not add the session token to external images or links', () => {
 		const html = renderMarkdown('![remote](https://example.com/image.png) [remote](https://example.com/file.pdf)', options)
 		expect(html).toContain('src="https://example.com/image.png"')

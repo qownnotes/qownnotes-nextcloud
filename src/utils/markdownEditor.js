@@ -9,6 +9,7 @@ import { languages } from '@codemirror/language-data'
 import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin } from '@codemirror/view'
 import { tagHighlighter, tags } from '@lezer/highlight'
+import { findAngleLinks } from './angleLinks.js'
 import { codeHighlighter } from './codeHighlighting.js'
 
 // Use Nextcloud's theme colors so highlighting also works in dark mode.
@@ -82,6 +83,61 @@ const codeBlockPlugin = ViewPlugin.fromClass(class {
 	}
 }, { decorations: (plugin) => plugin.decorations })
 
+const CODE_NODES = new Set(['InlineCode', 'FencedCode', 'CodeBlock', 'HTMLBlock', 'CommentBlock', 'Comment'])
+
+/**
+ * The links like <Journal.md> of a line, without the ones in code or in Markdown links
+ *
+ * @param {import('@lezer/common').Tree} tree the syntax tree
+ * @param {import('@codemirror/state').Line} line the line
+ * @return {Array<{from: number, to: number, href: string}>} positions in the document
+ */
+function angleLinks(tree, line) {
+	return findAngleLinks(line.text)
+		.map((link) => ({ ...link, from: line.from + link.from, to: line.from + link.to }))
+		.filter(({ from }) => {
+			for (let node = tree.resolveInner(from, 1); node; node = node.parent) {
+				if (CODE_NODES.has(node.name) || node.name === 'Link' || node.name === 'Image') {
+					return false
+				}
+			}
+			return true
+		})
+}
+
+const angleLinkMark = Decoration.mark({ class: 'cm-qn-link cm-qn-angle-link' })
+
+/**
+ * @param {import('@codemirror/view').EditorView} view editor view
+ * @return {import('@codemirror/view').DecorationSet}
+ */
+function angleLinkDecorations(view) {
+	const builder = new RangeSetBuilder()
+	const tree = syntaxTree(view.state)
+	for (const { from, to } of view.visibleRanges) {
+		for (let pos = from; pos <= to;) {
+			const line = view.state.doc.lineAt(pos)
+			for (const link of angleLinks(tree, line)) {
+				builder.add(link.from, link.to, angleLinkMark)
+			}
+			pos = line.to + 1
+		}
+	}
+	return builder.finish()
+}
+
+const angleLinkPlugin = ViewPlugin.fromClass(class {
+	constructor(view) {
+		this.decorations = angleLinkDecorations(view)
+	}
+
+	update(update) {
+		if (update.docChanged || update.viewportChanged || syntaxTree(update.startState) !== syntaxTree(update.state)) {
+			this.decorations = angleLinkDecorations(update.view)
+		}
+	}
+}, { decorations: (plugin) => plugin.decorations })
+
 /**
  * Markdown and lazily loaded syntax highlighting for fenced code languages.
  *
@@ -93,6 +149,10 @@ export function markdownEditorHighlighting() {
 		syntaxHighlighting(markdownHighlightStyle),
 		syntaxHighlighting(codeHighlighter),
 		codeBlockPlugin,
+		angleLinkPlugin,
+		EditorView.baseTheme({
+			'.cm-qn-angle-link': { color: 'var(--color-primary-element)', textDecoration: 'underline' },
+		}),
 	]
 }
 
@@ -203,16 +263,22 @@ export function linkAt(state, pos) {
 	const tree = ensureSyntaxTree(state, Math.min(state.doc.length, pos + 1), 50) ?? syntaxTree(state)
 	for (const side of [1, -1]) {
 		for (let node = tree.resolveInner(pos, side); node; node = node.parent) {
-			if (node.name === 'Link' || node.name === 'Image' || node.name === 'Autolink') {
-				const url = node.getChild('URL')
-				return url ? state.sliceDoc(url.from, url.to) : null
-			}
-			if (node.name === 'URL') {
-				return state.sliceDoc(node.from, node.to)
+			const url = node.name === 'URL' ? node : null
+			if (node.name === 'Link' || node.name === 'Image' || node.name === 'Autolink' || url) {
+				const target = url ?? node.getChild('URL')
+				if (!target) {
+					return null
+				}
+				// Link destinations may be in angle brackets, e.g. [Note](<My note.md>)
+				const href = state.sliceDoc(target.from, target.to).replace(/^<(.*)>$/u, '$1')
+				const isEmail = (url?.parent ?? node).name === 'Autolink' && /^[^:/]+@/u.test(href)
+				return isEmail ? `mailto:${href}` : href
 			}
 		}
 	}
-	return null
+	const line = state.doc.lineAt(pos)
+	const link = angleLinks(tree, line).find(({ from, to }) => from <= pos && pos <= to)
+	return link?.href ?? null
 }
 
 const linkHighlighter = tagHighlighter([{ tag: [tags.link, tags.url], class: 'cm-qn-link' }])

@@ -6,6 +6,7 @@
 import DOMPurify from 'dompurify'
 import MarkdownIt from 'markdown-it'
 import taskLists from 'markdown-it-task-lists'
+import { matchAngleLink } from './angleLinks.js'
 import { highlightCodeToHtml, loadCodeLanguage } from './codeHighlighting.js'
 import { attachmentUrl, isRelativeLink } from './mediaLinks.js'
 
@@ -28,6 +29,33 @@ const markdownIt = new MarkdownIt({
 		return html ?? ''
 	},
 }).use(taskLists, { enabled: true, label: true })
+
+// Links like <Journal.md> are links to files of the note folder, like in QOwnNotes Desktop
+markdownIt.inline.ruler.before('html_inline', 'angle_link', (state, silent) => {
+	if (state.src.charCodeAt(state.pos) !== 0x3C /* < */) {
+		return false
+	}
+	const match = matchAngleLink(state.src.slice(state.pos))
+	if (!match) {
+		return false
+	}
+	const href = state.md.normalizeLink(match.href)
+	if (!state.md.validateLink(href)) {
+		return false
+	}
+	if (!silent) {
+		const open = state.push('link_open', 'a', 1)
+		open.attrs = [['href', href]]
+		open.markup = 'autolink'
+		open.info = 'auto'
+		state.push('text', '', 0).content = match.href
+		const close = state.push('link_close', 'a', -1)
+		close.markup = 'autolink'
+		close.info = 'auto'
+	}
+	state.pos += match.length
+	return true
+})
 
 // The source line of each block, so the scrolling of the editor and the preview can be linked
 markdownIt.core.ruler.push('source_lines', (state) => {
