@@ -155,10 +155,11 @@ export default {
 	height: 100%;
 }
 
-/* Nextcloud styles contenteditable elements like input fields */
+/* Nextcloud styles contenteditable elements like input fields.
+   The content fills the editor, so clicks below the text of short notes also place the cursor (Firefox only focuses the scroller there) */
 .markdown-editor :deep(.cm-content) {
 	width: auto;
-	min-height: auto;
+	min-height: 100%;
 	margin: 0;
 	border: none;
 	border-radius: 0;
