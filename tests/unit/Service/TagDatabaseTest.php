@@ -13,10 +13,12 @@ use OCA\QOwnNotes\Exception\NotWritableException;
 use OCA\QOwnNotes\Exception\PreconditionFailedException;
 use OCA\QOwnNotes\Exception\TagDatabaseException;
 use OCA\QOwnNotes\Model\NoteLocation;
+use OCA\QOwnNotes\Service\AppSettings;
 use OCA\QOwnNotes\Service\TagDatabase;
 use OCA\QOwnNotes\Service\TagWriter;
 use OCP\Files\File;
 use OCP\Files\Folder;
+use OCP\IAppConfig;
 use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\ITempManager;
@@ -47,13 +49,15 @@ class TagDatabaseTest extends TestCase {
 		rmdir($this->dir);
 	}
 
-	private function createDatabase(?ILockingProvider $lockingProvider = null, ?ICache $cache = null): TagDatabase {
+	private function createDatabase(?ILockingProvider $lockingProvider = null, ?ICache $cache = null, string $maxSizeMib = '50'): TagDatabase {
 		$tempManager = $this->createMock(ITempManager::class);
 		$tempManager->method('getTemporaryFile')->willReturnCallback(fn (): string => tempnam($this->dir, 'tmp'));
 		$cacheFactory = $this->createMock(ICacheFactory::class);
 		$cacheFactory->method('createLocal')->willReturn($cache ?? $this->createMock(ICache::class));
+		$appConfig = $this->createMock(IAppConfig::class);
+		$appConfig->method('getValueString')->with('qownnotes', 'tag_database_max_size_mib')->willReturn($maxSizeMib);
 
-		return new TagDatabase($tempManager, $cacheFactory, $lockingProvider ?? $this->createMock(ILockingProvider::class));
+		return new TagDatabase($tempManager, $cacheFactory, $lockingProvider ?? $this->createMock(ILockingProvider::class), new AppSettings($appConfig));
 	}
 
 	private function createFile(?int $reportedSize = null): File {
@@ -308,7 +312,7 @@ class TagDatabaseTest extends TestCase {
 
 	public function testActualCopySizeIsLimited(): void {
 		$handle = fopen($this->storedPath, 'wb');
-		ftruncate($handle, TagDatabase::MAX_SIZE + 2);
+		ftruncate($handle, 50 * 1024 * 1024 + 2);
 		fclose($handle);
 		$file = $this->createFile(100);
 		$folder = $this->createMock(Folder::class);
@@ -322,6 +326,25 @@ class TagDatabaseTest extends TestCase {
 			$this->assertSame('notes.sqlite is too large', $e->getMessage());
 			$this->assertSame([], glob($this->dir . '/tmp*'));
 		}
+	}
+
+	public function testConfiguredSizeLimit(): void {
+		$pdo = $this->createStoredDatabase();
+		unset($pdo);
+		$handle = fopen($this->storedPath, 'ab');
+		ftruncate($handle, 1024 * 1024 + 1);
+		fclose($handle);
+
+		try {
+			$this->createDatabase(maxSizeMib: '1')->read($this->createFolder());
+			$this->fail('Database above the configured limit should be rejected');
+		} catch (TagDatabaseException $e) {
+			$this->assertSame('notes.sqlite is too large', $e->getMessage());
+			$this->assertSame([], glob($this->dir . '/tmp*'));
+		}
+
+		$this->assertSame(2 * 1024 * 1024, $this->createDatabase(maxSizeMib: '2')->getMaxSize());
+		$this->assertSame(50 * 1024 * 1024, $this->createDatabase(maxSizeMib: 'invalid')->getMaxSize());
 	}
 
 	public function testSourceOpenFailureRemovesCopy(): void {

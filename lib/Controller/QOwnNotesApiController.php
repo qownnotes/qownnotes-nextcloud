@@ -19,6 +19,7 @@ use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Files\Folder;
 use OCP\IConfig;
@@ -117,6 +118,7 @@ class QOwnNotesApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function restoreTrashedNote(string $file_name = '', int $timestamp = 0): JSONResponse {
 		$fileName = basename(str_replace('\\', '/', $file_name));
 		$restoredLocation = null;

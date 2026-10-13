@@ -28,6 +28,7 @@ use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Http\StreamResponse;
@@ -260,6 +261,7 @@ class NotesApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function uploadFile(int $noteid): Response {
 		return $this->responder->respond(function () use ($noteid): array {
 			$userId = $this->responder->getUserId();
@@ -280,6 +282,7 @@ class NotesApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function deleteAttachment(int $noteid, string $path = ''): Response {
 		return $this->responder->respond(function () use ($noteid, $path): array {
 			$userId = $this->responder->getUserId();

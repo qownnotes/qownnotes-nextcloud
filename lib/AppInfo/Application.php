@@ -41,6 +41,13 @@ class Application extends App implements IBootstrap {
 	/** Base path of all APIs, relative to the server URL */
 	public const API_BASE = '/index.php/apps/qownnotes/api/v1/';
 
+	/**
+	 * Per-user rate limit of expensive write endpoints that are not part of the note sync (tags, subfolders,
+	 * attachment uploads, trash restores): at most this many requests per endpoint within RATE_LIMIT_PERIOD seconds
+	 */
+	public const RATE_LIMIT_WRITES = 300;
+	public const RATE_LIMIT_PERIOD = 300;
+
 	public function __construct(array $urlParams = []) {
 		parent::__construct(self::APP_ID, $urlParams);
 	}

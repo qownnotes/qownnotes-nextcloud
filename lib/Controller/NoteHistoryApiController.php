@@ -25,6 +25,7 @@ use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\Response;
 use OCP\Files\File;
 use OCP\IRequest;
@@ -131,6 +132,7 @@ class NoteHistoryApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function restore(string $originalLocation = '', int $deleted = 0): Response {
 		return $this->responder->respond(function () use ($originalLocation, $deleted): array {
 			$userId = $this->responder->getUserId();

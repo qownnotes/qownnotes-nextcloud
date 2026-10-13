@@ -539,6 +539,20 @@ def test_tags(node, label):
     node.succeed(f"cp /tmp/notes.sqlite.bak {NOTES_SQLITE} && chown nextcloud: {NOTES_SQLITE} && touch -d '+2 minutes' {NOTES_SQLITE}")
     occ(node, "files:scan --path=admin/files/Notes")
 
+    # Databases above the configurable size limit are rejected
+    sqlite(node, "INSERT INTO trashItem (file_name) VALUES (hex(zeroblob(800000)))")
+    node.succeed(f"touch -d '+3 minutes' {NOTES_SQLITE}")
+    occ(node, "files:scan --path=admin/files/Notes")
+    occ_app_config(node, "config:app:set qownnotes tag_database_max_size_mib --value=1")
+    error, _, _ = api(node, "GET", "tags", expect=503)
+    assert "too large" in error["message"], error
+    occ_app_config(node, "config:app:set qownnotes tag_database_max_size_mib --value=2")
+    tags, _, _ = api(node, "GET", "tags")
+    assert [t["name"] for t in tags["tags"]] == ["Important"]
+    occ_app_config(node, "config:app:delete qownnotes tag_database_max_size_mib")
+    node.succeed(f"cp /tmp/notes.sqlite.bak {NOTES_SQLITE} && chown nextcloud: {NOTES_SQLITE} && touch -d '+4 minutes' {NOTES_SQLITE}")
+    occ(node, "files:scan --path=admin/files/Notes")
+
 
 def ocs(node, path, expect=200):
     data, _, _ = http_json(node, "GET", f"{BASE_URL}/ocs/v2.php/{path}", expect=expect)

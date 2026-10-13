@@ -41,8 +41,6 @@ class TagDatabase {
 	/** Schema version of newly created databases */
 	public const CREATE_SCHEMA_VERSION = 16;
 
-	public const MAX_SIZE = 50 * 1024 * 1024;
-
 	private const REQUIRED_COLUMNS = [
 		'appData' => ['name', 'value'],
 		'tag' => ['id', 'name', 'priority', 'parent_id', 'color', 'dark_color', 'updated'],
@@ -66,7 +64,15 @@ class TagDatabase {
 		private ITempManager $tempManager,
 		private ICacheFactory $cacheFactory,
 		private ILockingProvider $lockingProvider,
+		private AppSettings $appSettings,
 	) {
+	}
+
+	/**
+	 * Maximum size of notes.sqlite in bytes (app config key "tag_database_max_size_mib")
+	 */
+	public function getMaxSize(): int {
+		return $this->appSettings->getTagDatabaseMaxSizeMib() * 1024 * 1024;
 	}
 
 	public static function isAvailable(): bool {
@@ -257,7 +263,8 @@ class TagDatabase {
 	}
 
 	private function copyToTemp(File $file): string {
-		if ($file->getSize() > self::MAX_SIZE) {
+		$maxSize = $this->getMaxSize();
+		if ($file->getSize() > $maxSize) {
 			throw new TagDatabaseException('notes.sqlite is too large');
 		}
 
@@ -272,11 +279,11 @@ class TagDatabase {
 			}
 
 			// Storage metadata can be stale or inaccurate. Bound the actual copy as well.
-			$copied = stream_copy_to_stream($source, $target, self::MAX_SIZE + 1);
+			$copied = stream_copy_to_stream($source, $target, $maxSize + 1);
 			if ($copied === false) {
 				throw new TagDatabaseException('notes.sqlite can not be read');
 			}
-			if ($copied > self::MAX_SIZE) {
+			if ($copied > $maxSize) {
 				throw new TagDatabaseException('notes.sqlite is too large');
 			}
 			if (!fflush($target)) {

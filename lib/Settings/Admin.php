@@ -30,6 +30,8 @@ class Admin implements ISettings {
 		return new TemplateResponse(Application::APP_ID, 'admin', [
 			'uiEnabled' => $this->appSettings->isUiEnabled(),
 			'tagsAvailable' => TagDatabase::isAvailable(),
+			'tagDatabaseMaxSizeMib' => $this->appSettings->getTagDatabaseMaxSizeMib(),
+			'tagDatabaseMaxSizeLimitMib' => AppSettings::MAX_TAG_DATABASE_MAX_SIZE_MIB,
 			'saveUrl' => $this->urlGenerator->linkToRoute('qownnotes.admin_settings.save'),
 		], '');
 	}

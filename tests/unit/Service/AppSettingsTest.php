@@ -43,4 +43,42 @@ class AppSettingsTest extends TestCase {
 
 		(new AppSettings($appConfig))->setUiEnabled(false);
 	}
+
+	public static function maxSizeValues(): array {
+		return [
+			['50', 50],
+			[' 10 ', 10],
+			['1', 1],
+			['1024', 1024],
+			['0', 50],
+			['1025', 50],
+			['-5', 50],
+			['1.5', 50],
+			['', 50],
+			['big', 50],
+		];
+	}
+
+	#[DataProvider('maxSizeValues')]
+	public function testGetTagDatabaseMaxSizeMib(string $value, int $expected): void {
+		$appConfig = $this->createMock(IAppConfig::class);
+		$appConfig->method('getValueString')->with('qownnotes', 'tag_database_max_size_mib', '50')->willReturn($value);
+
+		$this->assertSame($expected, (new AppSettings($appConfig))->getTagDatabaseMaxSizeMib());
+	}
+
+	public function testSetTagDatabaseMaxSizeMibIsClamped(): void {
+		$appConfig = $this->createMock(IAppConfig::class);
+		$appConfig->expects($this->exactly(2))->method('setValueString')
+			->willReturnCallback(function (string $app, string $key, string $value): bool {
+				static $expected = ['1', '1024'];
+				$this->assertSame('tag_database_max_size_mib', $key);
+				$this->assertSame(array_shift($expected), $value);
+				return true;
+			});
+
+		$settings = new AppSettings($appConfig);
+		$settings->setTagDatabaseMaxSizeMib(0);
+		$settings->setTagDatabaseMaxSizeMib(5000);
+	}
 }

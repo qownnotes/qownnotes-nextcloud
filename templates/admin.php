@@ -26,17 +26,27 @@ declare(strict_types=1);
 		<p class="settings-hint">
 			<?php p($l->t('When disabled, only the APIs for QOwnNotes Desktop and Android are available.')); ?>
 		</p>
+
+		<h3><?php p($l->t('Tags')); ?></h3>
+		<p>
+			<?php if ($_['tagsAvailable']) {
+				p($l->t('Tags of the note folder database "notes.sqlite" are supported.'));
+			} else {
+				p($l->t('The PHP extension "pdo_sqlite" is missing, so tags of the note folder database "notes.sqlite" are not available.'));
+			} ?>
+		</p>
+		<p>
+			<label for="qownnotes-tag-database-max-size"><?php p($l->t('Maximum size of "notes.sqlite" (MiB)')); ?></label>
+			<input type="number" id="qownnotes-tag-database-max-size" name="tagDatabaseMaxSizeMib"
+				min="1" max="<?php p($_['tagDatabaseMaxSizeLimitMib']); ?>" step="1"
+				value="<?php p($_['tagDatabaseMaxSizeMib']); ?>">
+		</p>
+		<p class="settings-hint">
+			<?php p($l->t('Larger note folder databases are rejected, because they are copied and checked for every change of tags.')); ?>
+		</p>
+
 		<p>
 			<input type="submit" value="<?php p($l->t('Save')); ?>">
 		</p>
 	</form>
-
-	<h3><?php p($l->t('Tags')); ?></h3>
-	<p>
-		<?php if ($_['tagsAvailable']) {
-			p($l->t('Tags of the note folder database "notes.sqlite" are supported.'));
-		} else {
-			p($l->t('The PHP extension "pdo_sqlite" is missing, so tags of the note folder database "notes.sqlite" are not available.'));
-		} ?>
-	</p>
 </div>

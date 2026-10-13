@@ -28,8 +28,11 @@ class AdminSettingsController extends Controller {
 		parent::__construct(Application::APP_ID, $request);
 	}
 
-	public function save(string $uiEnabled = '0'): RedirectResponse {
+	public function save(string $uiEnabled = '0', string $tagDatabaseMaxSizeMib = ''): RedirectResponse {
 		$this->appSettings->setUiEnabled($uiEnabled === '1');
+		if (preg_match('/^\s*\d+\s*$/', $tagDatabaseMaxSizeMib)) {
+			$this->appSettings->setTagDatabaseMaxSizeMib((int)$tagDatabaseMaxSizeMib);
+		}
 
 		return new RedirectResponse(
 			$this->urlGenerator->linkToRoute('settings.AdminSettings.index', ['section' => Application::APP_ID])

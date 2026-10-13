@@ -16,6 +16,7 @@ use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\Response;
 use OCP\IRequest;
 
@@ -41,6 +42,7 @@ class SubFoldersApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function create(string $path = ''): Response {
 		return $this->responder->respond(fn (): array => $this->subFolderService->create($this->responder->getUserId(), $path));
 	}
@@ -48,6 +50,7 @@ class SubFoldersApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function move(string $path = '', string $newPath = ''): Response {
 		return $this->responder->respond(fn (): array => $this->subFolderService->move($this->responder->getUserId(), $path, $newPath));
 	}
@@ -55,6 +58,7 @@ class SubFoldersApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function destroy(string $path = ''): Response {
 		return $this->responder->respond(fn (): array => $this->subFolderService->delete($this->responder->getUserId(), $path));
 	}

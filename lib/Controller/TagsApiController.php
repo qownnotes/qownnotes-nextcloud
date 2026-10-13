@@ -18,6 +18,7 @@ use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\Attribute\CORS;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\IRequest;
@@ -46,6 +47,7 @@ class TagsApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function create(): Response {
 		return $this->respond(fn (): array => $this->tagService->createTag($this->responder->getUserId(), $this->request->getParams(), $this->getIfMatch()));
 	}
@@ -53,6 +55,7 @@ class TagsApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function update(int $id): Response {
 		return $this->respond(fn (): array => $this->tagService->updateTag($this->responder->getUserId(), $id, $this->request->getParams(), $this->getIfMatch()));
 	}
@@ -60,6 +63,7 @@ class TagsApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function destroy(int $id): Response {
 		return $this->respond(fn (): array => $this->tagService->deleteTag($this->responder->getUserId(), $id, $this->getIfMatch()));
 	}
@@ -70,6 +74,7 @@ class TagsApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function batch(mixed $operations = []): Response {
 		return $this->respond(function () use ($operations): array {
 			if (!is_array($operations)) {
@@ -103,6 +108,7 @@ class TagsApiController extends ApiController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
+	#[UserRateLimit(limit: Application::RATE_LIMIT_WRITES, period: Application::RATE_LIMIT_PERIOD)]
 	public function setNoteTags(int $id, mixed $tagIds = null, mixed $tagPaths = null): Response {
 		return $this->respond(function () use ($id, $tagIds, $tagPaths): array {
 			if (($tagIds !== null && !is_array($tagIds)) || ($tagPaths !== null && !is_array($tagPaths)) || ($tagIds === null && $tagPaths === null)) {

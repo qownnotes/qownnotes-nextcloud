@@ -37,6 +37,10 @@
     and its cached tags
   - `just screenshots` creates the app store and README screenshots with Playwright and a demo user
   - Rejected `notes.sqlite` copies are cleaned up, and the 50 MiB limit is enforced even with stale storage metadata
+  - The `notes.sqlite` size limit can be changed in the admin settings or with
+    `occ config:app:set qownnotes tag_database_max_size_mib --value=100`
+  - Expensive writes outside of the note sync (tags, subfolders, attachments, trash restores) are rate-limited
+    to 300 requests per user and endpoint within 5 minutes; the note sync itself is never rate-limited
   - Tag compatibility tests use a real Desktop schema-16 database; VM tests exercise parallel API and WebDAV writes
   - Tag responses respect read-only shares even when permissions change without a new database ETag
   - Tag keys use Desktop and Android base names without suffixes; repeated links do not upload, and changed tag transactions reconcile missing, restored and expired links

@@ -79,6 +79,7 @@ The Notes API and the QOwnNotes API 1.1 use HTTP status codes:
 | 404    | The note, subfolder or attachment doesn't exist                                                                                                                             |
 | 412    | `If-Match` didn't match; the body contains the current state (the note, or the `notes.sqlite` ETag)                                                                         |
 | 423    | The file is locked; the server already retried a few times                                                                                                                  |
+| 429    | Too many requests, see [Rate limits](#rate-limits)                                                                                                                          |
 | 500    | Unexpected error                                                                                                                                                            |
 | 503    | Tags are unavailable: the PHP extension `pdo_sqlite` is missing, or `notes.sqlite` can't be used (damaged, write-ahead logging, schema version not writable; see `message`) |
 | 507    | Not enough storage space                                                                                                                                                    |
@@ -86,6 +87,17 @@ The Notes API and the QOwnNotes API 1.1 use HTTP status codes:
 Error responses have the body `{"errorType": "NoteNotFoundException", "message": "…"}`. The message is only filled for errors of the app itself.
 
 The QOwnNotes API 1.0 endpoints keep the lenient error handling of the qownnotesapi app: they answer with status 200 and report errors in the body.
+
+## Rate limits
+
+Expensive writes that are not part of the note sync are limited to 300 requests per user and endpoint within 5 minutes. Further requests are answered with 429 by Nextcloud until the period has passed:
+
+- tag changes (`POST tags`, `PATCH`/`DELETE tags/{id}`, `POST tags/batch`, `PUT note/{id}/tags`); clients that change many notes should use `tags/batch`, which applies all operations with one upload of `notes.sqlite`
+- subfolder changes (`POST`/`PATCH`/`DELETE subfolders`)
+- attachment uploads and deletions (`POST`/`DELETE attachment/{noteId}`)
+- trash restores (`note/restore_trashed`, `POST trash/restore`)
+
+Reading, and creating, changing or deleting notes (the note sync), is never rate-limited. Administrators can override the limits with the Nextcloud system setting [`ratelimit_overwrite`](https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/config_sample_php_parameters.html), e.g. with the route `qownnotes.tags_api.batch`.
 
 ## Versioning
 
