@@ -371,6 +371,11 @@ def test_legacy_api(node, label, pkg_version):
     recursive = legacy_api(node, "trashed", {"dir": "/Legacy/", "recursive": "1"})
     assert {note["fileName"] for note in recursive["notes"]} == {"trashed.md", "nested.md"}
 
+    # Large trash listings can skip reading the notes
+    without_content = legacy_api(node, "trashed", {"dir": "/Legacy/", "extensions[]": ["qnote"], "content": "0"})
+    assert {note["fileName"] for note in without_content["notes"]} == {"trashed.md", "custom.qnote"}
+    assert all(note["data"] == "" and note["timestamp"] > 0 for note in without_content["notes"])
+
     deleted_note = trashed_notes["trashed.md"]
     restore = legacy_api(node, "restore_trashed", {"file_name": "/Legacy/trashed.md", "timestamp": deleted_note["timestamp"]})
     assert restore["result"] is True
@@ -642,6 +647,9 @@ def test_note_history(node, label):
     assert trashed["title"] == "History" and trashed["subFolderPath"] == "Hist"
     assert trashed["content"] == "# History\n\nsecond"
     assert all(n["originalLocation"].startswith("Notes/") for n in trash["notes"]), "Only notes of the note folder are listed"
+    without_content, _, _ = api(node, "GET", "trash?content=0")
+    assert [n["originalLocation"] for n in without_content["notes"]] == [n["originalLocation"] for n in trash["notes"]]
+    assert all(n["content"] is None for n in without_content["notes"])
 
     api(node, "POST", "trash/restore", {"originalLocation": "Other/History.md", "deleted": trashed["deleted"]}, expect=400)
     restored, _, _ = api(node, "POST", "trash/restore", {"originalLocation": trashed["originalLocation"], "deleted": trashed["deleted"]}, headers={"X-QOwnNotes-Relink-Tags": "1"})

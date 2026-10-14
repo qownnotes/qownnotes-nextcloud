@@ -91,12 +91,14 @@ class NoteHistoryApiController extends ApiController {
 
 	/**
 	 * Notes deleted from the note folder and its subfolders, newest first
+	 *
+	 * @param bool $content whether the note contents are sent; with `content=0`, `content` is null
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
-	public function trash(): Response {
-		return $this->responder->respond(function (): array {
+	public function trash(bool $content = true): Response {
+		return $this->responder->respond(function () use ($content): array {
 			$userId = $this->responder->getUserId();
 			$notesPath = $this->settingsService->getNotesPath($userId);
 			$items = $this->trashService->getTrashedNotes(
@@ -106,6 +108,7 @@ class NoteHistoryApiController extends ApiController {
 				true,
 				'mtime',
 				true,
+				$content,
 			);
 
 			$notes = [];

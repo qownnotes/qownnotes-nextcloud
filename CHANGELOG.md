@@ -22,6 +22,8 @@
   `<Journal.md#Heading>` also jumps to the heading
 - The selected text in the editor is clearly visible again, also in the current line, in code blocks and in inline
   code, because the selection is shown in a stronger color and the line backgrounds no longer cover it
+- Trash listings can skip the contents of the deleted notes with `content=0` (`GET note/trashed` and `GET trash`
+  of the QOwnNotes API), so large trash folders are listed quickly
 
 ## 26.10.0
 

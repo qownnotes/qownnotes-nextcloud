@@ -94,17 +94,22 @@ class QOwnNotesApiController extends ApiController {
 
 	/**
 	 * @param string|list<string> $extensions additional note file extensions
+	 * @param bool $content whether the note contents are sent; with `content=0`, `data` is an empty string
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[CORS]
-	public function getTrashedNotes(string $dir = '', mixed $extensions = [], string $sort = 'mtime', string $sortdirection = '', bool $recursive = false): JSONResponse {
+	public function getTrashedNotes(string $dir = '', mixed $extensions = [], string $sort = 'mtime', string $sortdirection = '', bool $recursive = false, bool $content = true): JSONResponse {
 		$directory = SettingsService::normalizePath($dir);
 		$extensions = array_merge(NoteFolderService::DEFAULT_NOTE_EXTENSIONS, is_array($extensions) ? array_map('strval', $extensions) : []);
 
 		$notes = [];
 		try {
-			$notes = $this->trashService->getTrashedNotes($this->getUser(), $directory, $extensions, $recursive, $sort, $sortdirection !== 'asc');
+			$notes = array_map(
+				// The legacy clients expect a string
+				static fn (array $note): array => array_merge($note, ['data' => $note['data'] ?? '']),
+				$this->trashService->getTrashedNotes($this->getUser(), $directory, $extensions, $recursive, $sort, $sortdirection !== 'asc', $content),
+			);
 		} catch (Throwable $e) {
 			$this->logger->debug('Trashed notes could not be loaded', ['exception' => $e]);
 		}

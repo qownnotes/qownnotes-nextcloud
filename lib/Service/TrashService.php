@@ -44,9 +44,10 @@ class TrashService {
 	 * @param string $directory folder relative to the user's files root, without leading and trailing slashes
 	 * @param list<string> $extensions note file extensions without dot
 	 * @param bool $recursive whether notes deleted from subfolders of the folder are included
-	 * @return list<array{noteName: string, fileName: string, timestamp: int, dateString: string, data: string, originalLocation: string}>
+	 * @param bool $withContent whether the contents of the notes are read; `data` is null otherwise
+	 * @return list<array{noteName: string, fileName: string, timestamp: int, dateString: string, data: ?string, originalLocation: string}>
 	 */
-	public function getTrashedNotes(IUser $user, string $directory, array $extensions, bool $recursive, string $sortAttribute, bool $sortDescending): array {
+	public function getTrashedNotes(IUser $user, string $directory, array $extensions, bool $recursive, string $sortAttribute, bool $sortDescending, bool $withContent = true): array {
 		$prefix = $directory === '' ? '' : $directory . '/';
 		$extensions = array_map('strtolower', $extensions);
 
@@ -77,7 +78,7 @@ class TrashService {
 				'fileName' => $item->getName(),
 				'timestamp' => $item->getDeletedTime(),
 				'dateString' => $this->dateTimeFormatter->formatDateTime($item->getDeletedTime()),
-				'data' => $this->readItem($user, $item) ?? '',
+				'data' => $withContent ? ($this->readItem($user, $item) ?? '') : null,
 				'originalLocation' => ltrim($item->getOriginalLocation(), '/'),
 			];
 		}

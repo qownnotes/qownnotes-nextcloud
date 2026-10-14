@@ -11,12 +11,12 @@ See the [API overview](README.md) for the base URL, authentication, capabilities
 
 These endpoints are compatible with the qownnotesapi app. They answer errors with HTTP status 200 and report them in the body, as before.
 
-| Method        | Path                   | Parameters                                                  |
-| ------------- | ---------------------- | ----------------------------------------------------------- |
-| `GET`         | `note/app_info`        | `notes_path`                                                |
-| `GET`         | `note/versions`        | `file_name`                                                 |
-| `GET`         | `note/trashed`         | `dir`, `extensions[]`, `sort`, `sortdirection`, `recursive` |
-| `GET`, `POST` | `note/restore_trashed` | `file_name`, `timestamp`                                    |
+| Method        | Path                   | Parameters                                                             |
+| ------------- | ---------------------- | ---------------------------------------------------------------------- |
+| `GET`         | `note/app_info`        | `notes_path`                                                           |
+| `GET`         | `note/versions`        | `file_name`                                                            |
+| `GET`         | `note/trashed`         | `dir`, `extensions[]`, `sort`, `sortdirection`, `recursive`, `content` |
+| `GET`, `POST` | `note/restore_trashed` | `file_name`, `timestamp`                                               |
 
 All paths (`notes_path`, `file_name`, `dir`) are relative to the user's files root. `.` and `..` are resolved, so they can't point outside of it.
 
@@ -80,6 +80,7 @@ Deleted notes of a folder (default: newest first):
 - `extensions[]` adds file extensions to `md` and `txt`.
 - `sort=name` sorts by file name instead of the deletion time, `sortdirection=asc` sorts ascending.
 - `recursive=1` also returns notes deleted from subfolders of `dir`. `originalLocation` is the path of the note before it was deleted. Both are additions of this app.
+- `content=0` doesn't read the deleted notes, so `data` is `""`. This keeps large trash listings fast. Also an addition of this app.
 
 ### `GET`/`POST note/restore_trashed`
 
@@ -278,5 +279,7 @@ These endpoints address notes by their ID and only return notes of the note fold
   ]
 }
 ```
+
+With `content=0`, the deleted notes aren't read and `content` is `null`.
 
 `POST trash/restore` takes `{originalLocation, deleted}` of such a note and returns `{"id": 1234}`, the ID of the restored note (`null` if it was restored to a place where it is no note, e.g. an ignored folder). With the header `X-QOwnNotes-Relink-Tags: 1`, the stale tag links of the note become active again.
