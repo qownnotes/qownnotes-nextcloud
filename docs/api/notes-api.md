@@ -100,6 +100,7 @@ The web interface always sends this header.
 | `noteHeaderStyle`      | `atx`   | Headline of notes created by the web interface: `atx` (`# Title`) or `setext` (underlined title)     |
 | `createTagDatabase`    | `true`  | Whether the server may create a missing `notes.sqlite` when tags are changed                         |
 | `rewriteMediaLinks`    | `true`  | Whether relative media links are adapted when a note is moved to another subfolder depth             |
+| `hideNavigation`       | `false` | Whether the app is hidden from the user's app navigation; the web interface stays available          |
 
 If the user never set `notesPath`, the app takes the note folder of the Nextcloud Notes app, so both apps show the same notes.
 

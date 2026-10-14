@@ -72,6 +72,7 @@ class SettingsServiceTest extends TestCase {
 			'notesPath' => '../Private/Notes',
 			'fileSuffix' => 'txt',
 			'subfoldersEnabled' => false,
+			'hideNavigation' => 'true',
 			'unknown' => 'value',
 		]);
 
@@ -79,6 +80,7 @@ class SettingsServiceTest extends TestCase {
 			'notesPath' => 'Private/Notes',
 			'fileSuffix' => '.txt',
 			'subfoldersEnabled' => 'no',
+			'hideNavigation' => 'yes',
 		], $stored);
 	}
 }

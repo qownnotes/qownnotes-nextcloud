@@ -24,6 +24,8 @@
   code, because the selection is shown in a stronger color and the line backgrounds no longer cover it
 - Trash listings can skip the contents of the deleted notes with `content=0` (`GET note/trashed` and `GET trash`
   of the QOwnNotes API), so large trash folders are listed quickly
+- Users who only sync with QOwnNotes Desktop or Android can hide QOwnNotes from their app navigation in the settings
+  of the web interface (setting `hideNavigation`); the web interface stays available at `/apps/qownnotes/`
 
 ## 26.10.0
 

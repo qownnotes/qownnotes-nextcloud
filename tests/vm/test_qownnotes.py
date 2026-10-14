@@ -129,6 +129,28 @@ def test_api_only_mode(node, label):
     assert capabilities(node)["qownnotes"]["ui_enabled"] is True
 
 
+def navigation_app_ids(node):
+    return [entry["id"] for entry in ocs(node, "core/navigation/apps")]
+
+
+def test_hide_navigation(node, label):
+    """Users can hide the navigation entry for themselves, the web interface stays available"""
+    assert "qownnotes" in navigation_app_ids(node)
+
+    settings, _, _ = api(node, "PUT", "settings", {"hideNavigation": True})
+    assert settings["hideNavigation"] is True
+    assert "qownnotes" not in navigation_app_ids(node)
+    http(node, "GET", f"{APP_URL}/", expect=200)
+
+    occ_app_config(node, "config:app:set qownnotes ui_enabled --value=no")
+    assert "qownnotes" not in navigation_app_ids(node)
+    occ_app_config(node, "config:app:set qownnotes ui_enabled --value=yes")
+
+    settings, _, _ = api(node, "PUT", "settings", {"hideNavigation": False})
+    assert settings["hideNavigation"] is False
+    assert "qownnotes" in navigation_app_ids(node)
+
+
 def test_notes_api_crud(node, label):
     settings, headers, _ = api(node, "GET", "settings")
     assert settings["notesPath"] == "Notes"
@@ -802,6 +824,7 @@ def test_version(node, label, pkg_version):
     test_app_basics(node, label)
     test_web_interface(node, label)
     test_api_only_mode(node, label)
+    test_hide_navigation(node, label)
     test_notes_api_crud(node, label)
     test_notes_api_listing(node, label)
     test_notes_api_attachments(node, label)

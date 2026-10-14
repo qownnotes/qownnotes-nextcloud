@@ -6,6 +6,41 @@
 import { expect, test } from '@playwright/test'
 import { apiClient, APP_PATH, deleteTags, login, navigationEntry, noteListItem, uniqueName } from './helpers.js'
 
+test('the app can be hidden from the app navigation in the settings', async ({ page, baseURL }) => {
+	const api = await apiClient(baseURL)
+	// The entries of the app menu, as the Nextcloud header gets them
+	const navigationAppIds = async () => {
+		const response = await page.request.get('/ocs/v2.php/core/navigation/apps', { headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } })
+		expect(response.ok()).toBeTruthy()
+		return (await response.json()).ocs.data.map((entry) => entry.id)
+	}
+	const toggleHideNavigation = async () => {
+		await navigationEntry(page, 'Settings').click()
+		const dialog = page.getByRole('dialog', { name: 'QOwnNotes settings' })
+		await dialog.getByText('Hide QOwnNotes from the app navigation').click()
+		await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+		await expect(dialog).toHaveCount(0)
+		await page.reload()
+	}
+	try {
+		await login(page)
+		await page.goto(APP_PATH)
+		expect(await navigationAppIds()).toContain('qownnotes')
+
+		await toggleHideNavigation()
+		expect((await api.get('settings')).hideNavigation).toBe(true)
+		expect(await navigationAppIds()).not.toContain('qownnotes')
+
+		// The web interface stays available, so the setting can be turned off again
+		await toggleHideNavigation()
+		expect((await api.get('settings')).hideNavigation).toBe(false)
+		expect(await navigationAppIds()).toContain('qownnotes')
+	} finally {
+		await api.put('settings', { hideNavigation: false })
+		await api.dispose()
+	}
+})
+
 for (const width of [1400, 390]) {
 	test.describe(`UI at ${width}px`, () => {
 		test.use({ viewport: { width, height: 844 } })

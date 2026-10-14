@@ -74,6 +74,8 @@ occ config:app:set qownnotes ui_enabled --value=no
 
 The navigation entry, the web interface and all integrations (dashboard, search, link previews, Files action) disappear. The APIs and the capabilities keep working.
 
+Users who only sync with QOwnNotes Desktop or Android can hide the navigation entry for themselves with **Hide QOwnNotes from the app navigation** in the settings of the web interface. The web interface stays available at `/apps/qownnotes/`.
+
 ## Documentation
 
 - [API overview](docs/api/README.md): base URL, authentication, capabilities and errors

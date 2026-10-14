@@ -40,6 +40,7 @@ export const useSettingsStore = defineStore('settings', {
 			noteHeaderStyle: 'atx',
 			createTagDatabase: true,
 			rewriteMediaLinks: true,
+			hideNavigation: false,
 		},
 		// Settings of the web interface, stored in the browser
 		local: loadLocalSettings(),

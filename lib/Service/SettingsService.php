@@ -23,6 +23,7 @@ class SettingsService {
 	public const NOTE_HEADER_STYLE = 'noteHeaderStyle';
 	public const CREATE_TAG_DATABASE = 'createTagDatabase';
 	public const REWRITE_MEDIA_LINKS = 'rewriteMediaLinks';
+	public const HIDE_NAVIGATION = 'hideNavigation';
 
 	public const DEFAULT_NOTES_PATH = 'Notes';
 	public const DEFAULT_FILE_SUFFIX = '.md';
@@ -89,7 +90,14 @@ class SettingsService {
 	}
 
 	/**
-	 * @return array{notesPath: string, fileSuffix: string, ignoreNoteSubFolders: string, subfoldersEnabled: bool, noteHeaderStyle: string, createTagDatabase: bool, rewriteMediaLinks: bool}
+	 * Whether the user hides the app from the navigation, e.g. because they only sync with QOwnNotes Desktop or Android
+	 */
+	public function isHideNavigation(string $userId): bool {
+		return $this->getBool($userId, self::HIDE_NAVIGATION, false);
+	}
+
+	/**
+	 * @return array{notesPath: string, fileSuffix: string, ignoreNoteSubFolders: string, subfoldersEnabled: bool, noteHeaderStyle: string, createTagDatabase: bool, rewriteMediaLinks: bool, hideNavigation: bool}
 	 */
 	public function getAll(string $userId): array {
 		return [
@@ -100,6 +108,7 @@ class SettingsService {
 			self::NOTE_HEADER_STYLE => $this->getNoteHeaderStyle($userId),
 			self::CREATE_TAG_DATABASE => $this->isCreateTagDatabase($userId),
 			self::REWRITE_MEDIA_LINKS => $this->isRewriteMediaLinks($userId),
+			self::HIDE_NAVIGATION => $this->isHideNavigation($userId),
 		];
 	}
 
@@ -114,7 +123,7 @@ class SettingsService {
 				self::NOTES_PATH => self::normalizePath((string)$value) ?: self::DEFAULT_NOTES_PATH,
 				self::FILE_SUFFIX => self::normalizeFileSuffix((string)$value),
 				self::IGNORE_NOTE_SUB_FOLDERS => trim((string)$value),
-				self::SUB_FOLDERS_ENABLED, self::CREATE_TAG_DATABASE, self::REWRITE_MEDIA_LINKS => self::toBool($value) ? 'yes' : 'no',
+				self::SUB_FOLDERS_ENABLED, self::CREATE_TAG_DATABASE, self::REWRITE_MEDIA_LINKS, self::HIDE_NAVIGATION => self::toBool($value) ? 'yes' : 'no',
 				self::NOTE_HEADER_STYLE => $value === self::HEADER_STYLE_SETEXT ? self::HEADER_STYLE_SETEXT : self::HEADER_STYLE_ATX,
 				default => null,
 			};

@@ -78,6 +78,15 @@
 			</p>
 		</NcAppSettingsSection>
 
+		<NcAppSettingsSection id="qownnotes-settings-navigation" :name="t('qownnotes', 'Navigation')">
+			<NcCheckboxRadioSwitch v-model="form.hideNavigation" type="switch">
+				{{ t('qownnotes', 'Hide QOwnNotes from the app navigation') }}
+			</NcCheckboxRadioSwitch>
+			<p class="settings-hint">
+				{{ t('qownnotes', 'For example if you only use QOwnNotes Desktop or Android. The web interface stays available at {url}, and the apps keep syncing.', { url: appUrl }) }}
+			</p>
+		</NcAppSettingsSection>
+
 		<div class="settings-dialog__buttons">
 			<NcButton :disabled="saving" @click="onOpenChanged(false)">
 				{{ t('qownnotes', 'Cancel') }}
@@ -95,6 +104,7 @@
 <script>
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
+import { generateUrl } from '@nextcloud/router'
 import { mapStores } from 'pinia'
 import NcAppSettingsDialog from '@nextcloud/vue/components/NcAppSettingsDialog'
 import NcAppSettingsSection from '@nextcloud/vue/components/NcAppSettingsSection'
@@ -137,6 +147,10 @@ export default {
 
 	computed: {
 		...mapStores(useSettingsStore, useTagsStore),
+
+		appUrl() {
+			return window.location.origin + generateUrl('/apps/qownnotes/')
+		},
 	},
 
 	watch: {
