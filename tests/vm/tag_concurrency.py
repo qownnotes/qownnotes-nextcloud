@@ -82,10 +82,12 @@ def main():
             status, headers, content = request("GET", DAV)
             assert status == 200
             dav_etag = next(value for name, value in headers.items() if name.lower() == "etag")
-            # Local storage derives ETags from mtime and size. A single SQLite
-            # insert can leave both unchanged in the same second, making the
-            # DAV upload invisible to If-Match and the API's snapshot cache.
-            # Grow the database so this race tests two distinct file versions.
+            original_size = len(content)
+            # Local storage derives ETags from mtime and size. Either writer
+            # can otherwise leave both unchanged in the same second. The API
+            # touches the file after writing, but DAV can check If-Match before
+            # that touch. Grow BOTH payloads so the write itself changes the
+            # ETag, whichever writer wins, without relying on a later touch.
             dav_names = {f"DAV writer {i} " + "x" * 200 for i in range(100)}
             with tempfile.TemporaryDirectory(prefix="qownnotes-race-") as directory:
                 database = Path(directory) / "notes.sqlite"
@@ -94,8 +96,14 @@ def main():
                     db.executemany("INSERT INTO tag (name) VALUES (?)", [(name,) for name in sorted(dav_names)])
                 uploaded = database.read_bytes()
                 assert len(uploaded) > len(content), (len(content), len(uploaded))
-            prefix = f"API batch {iteration} "
+            prefix = f"API batch {iteration} " + "y" * 200
             operations = [{"op": "create", "name": prefix + str(i)} for i in range(100)]
+            with tempfile.TemporaryDirectory(prefix="qownnotes-api-race-") as directory:
+                database = Path(directory) / "notes.sqlite"
+                database.write_bytes(content)
+                with sqlite3.connect(database) as db:
+                    db.executemany("INSERT INTO tag (name) VALUES (?)", [(op["name"],) for op in operations])
+                assert database.stat().st_size > len(content), (database.stat().st_size, len(content))
             results = parallel(
                 lambda: api("POST", "tags/batch", {"operations": operations}, dav_etag),
                 lambda: request("PUT", DAV, uploaded, dav_etag),
@@ -108,6 +116,7 @@ def main():
             assert final == expected, (statuses, final, expected)
             status, _, content = request("GET", DAV)
             assert status == 200 and content[18:20] == b"\x01\x01"
+            assert len(content) > original_size, (len(content), original_size)
             with tempfile.TemporaryDirectory(prefix="qownnotes-check-") as directory:
                 database = Path(directory) / "notes.sqlite"
                 database.write_bytes(content)
