@@ -63,6 +63,11 @@ vm-test-version version='34' args='':
 test-unit:
     composer run test:unit
 
+# Run the API integration tests against the docker dev server or NEXTCLOUD_URL (see tests/integration/README.md)
+[group('test')]
+test-integration args='':
+    composer run test:integration -- {{ args }}
+
 # Build the frontend into js/
 [group('dev')]
 build-js:

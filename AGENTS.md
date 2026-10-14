@@ -27,5 +27,6 @@ API changes must be reflected in `docs/api/` (`notes-api.md`, `qownnotes-api.md`
 ## Checks
 
 - `just lint-php` runs PHP syntax checks, php-cs-fixer, psalm and the unit tests.
+- `just test-integration` runs the API integration tests (`tests/integration/`) against the docker dev server.
 - `just vm-test-version` runs the NixOS VM test (`tests/vm/`) against one Nextcloud version. New files must be added to git first.
 - `just format` runs all formatters (pre-commit hooks).

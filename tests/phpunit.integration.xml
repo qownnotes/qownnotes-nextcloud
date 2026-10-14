@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Patrizio Bekerle <patrizio@bekerle.com>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<!-- API integration tests against a running Nextcloud server, see tests/integration/README.md -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="../vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="../vendor/autoload.php"
+         colors="true"
+         cacheDirectory="../.phpunit.cache"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <testsuite name="integration">
+            <directory>integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
