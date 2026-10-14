@@ -26,6 +26,8 @@
   of the QOwnNotes API), so large trash folders are listed quickly
 - Users who only sync with QOwnNotes Desktop or Android can hide QOwnNotes from their app navigation in the settings
   of the web interface (setting `hideNavigation`); the web interface stays available at `/apps/qownnotes/`
+- The endpoints of QOwnNotes API 1.0 (`note/app_info`, `note/versions`, `note/trashed`, `note/restore_trashed`) also
+  send the headers `X-Notes-API-Versions` and `X-QOwnNotes-API-Versions`, like all other API responses
 
 ## 26.10.0
 

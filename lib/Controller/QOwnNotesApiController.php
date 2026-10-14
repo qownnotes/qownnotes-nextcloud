@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\QOwnNotes\Controller;
 
 use OCA\QOwnNotes\AppInfo\Application;
+use OCA\QOwnNotes\Http\ApiResponder;
 use OCA\QOwnNotes\Service\NoteFolderService;
 use OCA\QOwnNotes\Service\SettingsService;
 use OCA\QOwnNotes\Service\TrashService;
@@ -59,7 +60,7 @@ class QOwnNotesApiController extends ApiController {
 			$notesPathExists = $userFolder->nodeExists($notesPath) && $userFolder->get($notesPath) instanceof Folder;
 		}
 
-		return new JSONResponse([
+		return ApiResponder::withVersionHeaders(new JSONResponse([
 			'user' => $user->getUID(),
 			'versions_app' => $this->versionService->isAvailable($user),
 			'trash_app' => $this->trashService->isAvailable($user),
@@ -67,7 +68,7 @@ class QOwnNotesApiController extends ApiController {
 			'app_version' => $this->appManager->getAppVersion(Application::APP_ID),
 			'server_version' => (string)$this->config->getSystemValue('version', ''),
 			'notes_path_exists' => $notesPathExists,
-		]);
+		]));
 	}
 
 	#[NoAdminRequired]
@@ -85,11 +86,11 @@ class QOwnNotesApiController extends ApiController {
 				: 'An error happened: ' . $e->getMessage();
 		}
 
-		return new JSONResponse([
+		return ApiResponder::withVersionHeaders(new JSONResponse([
 			'file_name' => $file_name,
 			'versions' => $versions,
 			'error_messages' => $errorMessages,
-		]);
+		]));
 	}
 
 	/**
@@ -114,10 +115,10 @@ class QOwnNotesApiController extends ApiController {
 			$this->logger->debug('Trashed notes could not be loaded', ['exception' => $e]);
 		}
 
-		return new JSONResponse([
+		return ApiResponder::withVersionHeaders(new JSONResponse([
 			'directory' => $directory,
 			'notes' => $notes,
-		]);
+		]));
 	}
 
 	#[NoAdminRequired]
@@ -133,11 +134,11 @@ class QOwnNotesApiController extends ApiController {
 			$this->logger->warning('Trashed note could not be restored', ['exception' => $e]);
 		}
 
-		return new JSONResponse([
+		return ApiResponder::withVersionHeaders(new JSONResponse([
 			'result' => $restoredLocation !== null,
 			'path' => '//' . $fileName . '.d' . $timestamp,
 			'filename' => $fileName,
-		]);
+		]));
 	}
 
 	private function getUser(): IUser {

@@ -63,6 +63,17 @@ class ApiResponder {
 			$response = $this->createErrorResponse($e);
 		}
 
+		return self::withVersionHeaders($response);
+	}
+
+	/**
+	 * Adds the supported API versions, which every API response contains
+	 *
+	 * @template T of Response
+	 * @param T $response
+	 * @return T
+	 */
+	public static function withVersionHeaders(Response $response): Response {
 		$response->addHeader('X-Notes-API-Versions', implode(', ', Application::NOTES_API_VERSIONS));
 		$response->addHeader('X-QOwnNotes-API-Versions', implode(', ', Application::QOWNNOTES_API_VERSIONS));
 		return $response;
