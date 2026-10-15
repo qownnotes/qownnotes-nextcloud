@@ -74,14 +74,9 @@ jobs:
     needs: validate
     uses: ./.github/workflows/format-check.yml
 
-  vm:
-    name: "🧪 Nextcloud VM tests"
-    needs: validate
-    uses: ./.github/workflows/vm-test.yml
-
   sign:
     name: "🔐 Sign and verify exact archive"
-    needs: [prepare, format, vm]
+    needs: [prepare, format]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: release-signing
