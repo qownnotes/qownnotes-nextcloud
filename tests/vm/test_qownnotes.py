@@ -5,6 +5,7 @@ import html
 import json
 import re
 import shlex
+import xml.etree.ElementTree as ET
 from urllib.parse import quote, urlencode
 
 BASE_URL = "http://localhost"
@@ -340,7 +341,7 @@ def test_legacy_api(node, label, pkg_version):
     assert missing_path_info["versions_app"] is True
     assert missing_path_info["trash_app"] is True
     assert missing_path_info["versioning"] is True
-    assert missing_path_info["app_version"] == "26.10.0"
+    assert missing_path_info["app_version"] == APP_VERSION, missing_path_info
     assert missing_path_info["server_version"].startswith(label + ".")
     assert missing_path_info["notes_path_exists"] is False
 
