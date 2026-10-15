@@ -130,6 +130,12 @@ class ReleaseCheckTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "CHANGELOG.md"):
                     MODULE.check_release(self.root)
 
+    def test_newest_changelog_version_must_match(self):
+        path = self.root / "CHANGELOG.md"
+        path.write_text("## 26.10.1\n\n- Newer release\n\n" + path.read_text())
+        with self.assertRaisesRegex(ValueError, "newest section must match"):
+            MODULE.check_release(self.root)
+
     def test_missing_release_input(self):
         (self.root / "COPYING").unlink()
         with self.assertRaisesRegex(ValueError, "Missing release input"):

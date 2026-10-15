@@ -20,7 +20,7 @@ It also provides the server APIs for the [QOwnNotes desktop app](https://www.qow
 
 Tags need the PHP extension `pdo_sqlite`. If you switch from the QOwnNotesAPI or Notes app, see the [migration guide](https://github.com/qownnotes/qownnotes-nextcloud/blob/main/docs/migration.md).]]></description>
     <version>26.10.1</version>
-    <licence>agpl</licence>
+    <licence>AGPL-3.0-or-later</licence>
     <author mail="patrizio@bekerle.com" homepage="https://www.bekerle.com/">Patrizio Bekerle</author>
     <namespace>QOwnNotes</namespace>
 

@@ -36,6 +36,8 @@ def check_release(root: Path, built: bool = False) -> tuple[str, str]:
     matching = [section for section in sections if section.group(1) == version]
     if len(matching) != 1:
         raise ValueError(f"CHANGELOG.md must contain exactly one section for {version}")
+    if sections[0] != matching[0]:
+        raise ValueError(f"CHANGELOG.md newest section must match {version}")
     notes = changelog[matching[0].end() :]
     notes = re.split(r"^## ", notes, maxsplit=1, flags=re.MULTILINE)[0].strip()
     if not notes:

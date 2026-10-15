@@ -8,6 +8,7 @@ on:
       - "*"
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   format-check:
@@ -27,4 +28,9 @@ jobs:
       - name: 🔧 Install devenv.sh
         run: nix profile install nixpkgs#devenv
       - name: 🌳 Format code
-        run: devenv shell just -- ci-format-check
+        run: |
+          devenv shell just -- ci-format-check
+          git diff --exit-code
+      - name: 🧪 PHP release checks
+        if: github.ref == 'refs/heads/release'
+        run: devenv shell just -- lint-php

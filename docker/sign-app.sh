@@ -77,7 +77,9 @@ printf "\n... and %s code chunks in js/\n\n" "$(find "${APP_DEST}/js" -name '*.c
 
 mkdir -p "${BUILD_DIR}"
 tar czf "${ARCHIVE}" --owner=0 --group=0 --numeric-owner -C "${WORK_DIR}" "${APP_NAME}"
-openssl dgst -sha512 -sign "${WORK_DIR}/certificates/${APP_NAME}.key" "${ARCHIVE}" | openssl base64 -A >"${ARCHIVE}.sig"
+# Avoid a pipeline that could hide a failure of the signing command in /bin/sh.
+openssl dgst -sha512 -sign "${WORK_DIR}/certificates/${APP_NAME}.key" -out "${WORK_DIR}/archive-signature" "${ARCHIVE}"
+openssl base64 -A -in "${WORK_DIR}/archive-signature" >"${ARCHIVE}.sig"
 chown -R "$(stat -c '%u:%g' "${APP_SOURCE}")" "${BUILD_DIR}"
 
 echo "📦 Archive: build/$(basename "${ARCHIVE}") ($(($(stat -c '%s' "${ARCHIVE}") / 1024)) KiB)"
