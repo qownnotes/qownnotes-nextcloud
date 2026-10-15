@@ -165,11 +165,11 @@ class GitHubPublishTest(unittest.TestCase):
 
     def test_refuses_tag_for_different_commit(self):
         with patch.object(
-            GITHUB, "gh", side_effect=[None, json.dumps({"sha": "b" * 40})]
+            GITHUB, "gh", side_effect=[None, "{}", json.dumps({"sha": "b" * 40})]
         ) as gh:
             with self.assertRaisesRegex(ValueError, "different commit"):
                 GITHUB.publish(self.root, COMMIT, REPO)
-            self.assertEqual(gh.call_count, 2)
+            self.assertEqual(gh.call_count, 3)
 
     def test_refuses_draft_for_different_commit(self):
         release = {"draft": True, "target_commitish": "b" * 40, "assets": []}
@@ -178,6 +178,19 @@ class GitHubPublishTest(unittest.TestCase):
             self.assertRaisesRegex(ValueError, "different commit"),
         ):
             GITHUB.publish(self.root, COMMIT, REPO)
+
+    def test_existing_annotated_tag_is_resolved_to_commit(self):
+        ref = {"object": {"type": "tag", "sha": "b" * 40}}
+        with patch.object(
+            GITHUB,
+            "gh",
+            side_effect=[None, json.dumps(ref), json.dumps({"sha": COMMIT})] + [""] * 5,
+        ) as gh:
+            GITHUB.publish(self.root, COMMIT, REPO)
+        self.assertEqual(
+            gh.call_args_list[2].args, ("api", f"repos/{REPO}/commits/v26.10.1")
+        )
+        self.assertEqual(gh.call_args_list[3].args[:2], ("release", "create"))
 
     def test_refuses_modified_signed_archive(self):
         self.archive.write_bytes(b"tampered")
@@ -189,11 +202,13 @@ class GitHubPublishTest(unittest.TestCase):
     def test_published_release_is_not_modified(self):
         release = {"draft": False, "assets": []}
         with patch.object(
-            GITHUB, "gh", side_effect=[json.dumps(release), json.dumps({"sha": COMMIT})]
+            GITHUB,
+            "gh",
+            side_effect=[json.dumps(release), "{}", json.dumps({"sha": COMMIT})],
         ) as gh:
             with self.assertRaisesRegex(ValueError, "refusing to modify"):
                 GITHUB.publish(self.root, COMMIT, REPO)
-            self.assertEqual(gh.call_count, 2)
+            self.assertEqual(gh.call_count, 3)
 
     def test_partial_draft_resumes_identical_assets(self):
         release = {"draft": True, "assets": [{"name": self.archive.name}]}
@@ -280,6 +295,31 @@ class GitHubPublishTest(unittest.TestCase):
                     "api", "repos/example/releases/tags/v26.10.1", allow_missing=True
                 )
             )
+
+    def test_missing_tag_uses_ref_404_and_creates_release(self):
+        def run(args, **kwargs):
+            if args[1] == "api":
+                endpoint = args[2]
+                if endpoint.endswith("/commits/v26.10.1"):
+                    return MagicMock(returncode=1, stderr="HTTP 422", stdout="")
+                self.assertIn(
+                    endpoint,
+                    (
+                        f"repos/{REPO}/releases/tags/v26.10.1",
+                        f"repos/{REPO}/git/ref/tags/v26.10.1",
+                    ),
+                )
+                return MagicMock(returncode=1, stderr="HTTP 404", stdout="")
+            return MagicMock(returncode=0, stderr="", stdout="")
+
+        with patch.object(GITHUB.subprocess, "run", side_effect=run) as mocked:
+            GITHUB.publish(self.root, COMMIT, REPO)
+        calls = [call.args[0] for call in mocked.call_args_list]
+        self.assertFalse(any("/commits/" in call[-1] for call in calls))
+        self.assertEqual(calls[2][:4], ["gh", "release", "create", "v26.10.1"])
+        self.assertIn(COMMIT, calls[2])
+        self.assertEqual(sum(call[1:3] == ["release", "upload"] for call in calls), 3)
+        self.assertIn("--draft=false", calls[-1])
 
 
 if __name__ == "__main__":

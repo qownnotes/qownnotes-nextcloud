@@ -54,7 +54,14 @@ def publish(root: Path, commit: str, repository: str) -> None:
     release_data = gh(
         "api", f"repos/{repository}/releases/tags/{tag}", allow_missing=True
     )
-    tag_data = gh("api", f"repos/{repository}/commits/{tag}", allow_missing=True)
+    # The commits endpoint returns 422, not 404, for a missing tag. Check
+    # the exact ref first, then resolve existing tags (including annotated tags).
+    tag_ref = gh("api", f"repos/{repository}/git/ref/tags/{tag}", allow_missing=True)
+    tag_data = (
+        gh("api", f"repos/{repository}/commits/{tag}")
+        if tag_ref is not None
+        else None
+    )
     if tag_data is not None and json.loads(tag_data)["sha"] != commit:
         raise ValueError(f"Existing {tag} tag points to a different commit")
     if release_data is None:
