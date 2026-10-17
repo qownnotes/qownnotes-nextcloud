@@ -8,6 +8,7 @@
   the note icon, like in QOwnNotes Desktop; the emoji is taken from the headline of the note, so it also works if
   QOwnNotes Desktop removed it from the file name. Sync conflict copies like `TODO (conflicted copy 2026-07-10 070952)`
   are marked with ⚠️. The emoji icons can be turned off in the menu of the note list
+- The editor cursor is clearly visible in dark mode
 
 ## 26.10.1
 
