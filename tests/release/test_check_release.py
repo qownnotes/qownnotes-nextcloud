@@ -136,6 +136,20 @@ class ReleaseCheckTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "newest section must match"):
             MODULE.check_release(self.root)
 
+    def test_unreleased_changelog_sections_between_releases(self):
+        path = self.root / "CHANGELOG.md"
+        original = path.read_text()
+        path.write_text("## 26.10.1\n\n- Next release\n\n" + original)
+        self.assertEqual(
+            MODULE.check_release(self.root, allow_unreleased=True),
+            ("26.10.0", "- Initial release\n"),
+        )
+        for newest in ("26.9.1", "Unreleased", "26.13.0"):
+            with self.subTest(newest=newest):
+                path.write_text(f"## {newest}\n\n- Other\n\n" + original)
+                with self.assertRaisesRegex(ValueError, "newest section must match"):
+                    MODULE.check_release(self.root, allow_unreleased=True)
+
     def test_missing_release_input(self):
         (self.root / "COPYING").unlink()
         with self.assertRaisesRegex(ValueError, "Missing release input"):

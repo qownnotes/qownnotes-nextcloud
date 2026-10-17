@@ -109,7 +109,7 @@ sign-app: build-js
 [group('release')]
 release-check:
     python3 -m unittest discover -s tests/release
-    python3 scripts/check-release.py
+    python3 scripts/check-release.py --allow-unreleased
 
 # Run the code format checker in CI
 [group('ci')]

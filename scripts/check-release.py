@@ -11,13 +11,21 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+CALVER = r"[0-9]{2}\.(?:[1-9]|1[0-2])\.(?:0|[1-9][0-9]*)"
 
-def check_release(root: Path, built: bool = False) -> tuple[str, str]:
+
+def calver_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def check_release(
+    root: Path, built: bool = False, allow_unreleased: bool = False
+) -> tuple[str, str]:
     info = ET.parse(root / "appinfo/info.xml").getroot()
     version = info.findtext("version", "")
     if info.findtext("id") != "qownnotes":
         raise ValueError("appinfo/info.xml must use app ID qownnotes")
-    if not re.fullmatch(r"[0-9]{2}\.(?:[1-9]|1[0-2])\.(?:0|[1-9][0-9]*)", version):
+    if not re.fullmatch(CALVER, version):
         raise ValueError("appinfo/info.xml must contain a CalVer YY.M.patch version")
     for name in ("package.json", "package-lock.json"):
         package = json.loads((root / name).read_text())
@@ -36,8 +44,15 @@ def check_release(root: Path, built: bool = False) -> tuple[str, str]:
     matching = [section for section in sections if section.group(1) == version]
     if len(matching) != 1:
         raise ValueError(f"CHANGELOG.md must contain exactly one section for {version}")
-    if sections[0] != matching[0]:
-        raise ValueError(f"CHANGELOG.md newest section must match {version}")
+    # Between releases, the notes of the next version are collected in a newer section
+    for section in sections[: sections.index(matching[0])]:
+        unreleased = section.group(1)
+        if not (
+            allow_unreleased
+            and re.fullmatch(CALVER, unreleased)
+            and calver_key(unreleased) > calver_key(version)
+        ):
+            raise ValueError(f"CHANGELOG.md newest section must match {version}")
     notes = changelog[matching[0].end() :]
     notes = re.split(r"^## ", notes, maxsplit=1, flags=re.MULTILINE)[0].strip()
     if not notes:
@@ -103,11 +118,16 @@ def main() -> int:
         "--built", action="store_true", help="also require the built frontend"
     )
     parser.add_argument(
+        "--allow-unreleased",
+        action="store_true",
+        help="allow changelog sections of newer, not yet released versions",
+    )
+    parser.add_argument(
         "--notes-output", type=Path, help="write the validated release notes"
     )
     args = parser.parse_args()
     try:
-        version, notes = check_release(args.root, args.built)
+        version, notes = check_release(args.root, args.built, args.allow_unreleased)
         if args.notes_output:
             args.notes_output.write_text(notes)
     except (OSError, ValueError, ET.ParseError) as error:
