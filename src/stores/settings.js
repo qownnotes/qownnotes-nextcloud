@@ -16,6 +16,8 @@ const DEFAULT_LOCAL_SETTINGS = {
 	sideBySidePreview: false,
 	tagFilterMode: 'or',
 	includeChildTags: true,
+	// Show the leading emoji of the note headline as icon in the note list, like QOwnNotes Desktop
+	detectLeadingEmoji: true,
 }
 
 /**

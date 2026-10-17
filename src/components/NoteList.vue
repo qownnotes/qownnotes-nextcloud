@@ -39,6 +39,11 @@
 						@update:modelValue="settingsStore.setLocal('showSubfolderNotes', $event)">
 						{{ t('qownnotes', 'Show notes of subfolders') }}
 					</NcActionCheckbox>
+					<NcActionCheckbox
+						:modelValue="settingsStore.local.detectLeadingEmoji"
+						@update:modelValue="settingsStore.setLocal('detectLeadingEmoji', $event)">
+						{{ t('qownnotes', 'Show leading emoji of the note title as icon') }}
+					</NcActionCheckbox>
 				</NcActions>
 			</div>
 			<BulkActions v-if="notesStore.selection.length > 0" @deleted="$emit('notesDeleted', $event)" />
@@ -57,7 +62,7 @@
 			<NcListItem
 				v-for="note in visibleNotes"
 				:key="note.id"
-				:name="note.title"
+				:name="listEntries.get(note.id).name"
 				:active="note.id === selectedNoteId"
 				:data-note-id="note.id"
 				class="note-list__item"
@@ -66,7 +71,11 @@
 				@click.prevent="onClick($event, note)"
 				@dragstart="onDragStart($event, note)">
 				<template #icon>
-					<Star v-if="note.favorite" :size="20" class="note-list__favorite" />
+					<span
+						v-if="listEntries.get(note.id).emoji"
+						class="note-list__emoji"
+						aria-hidden="true">{{ listEntries.get(note.id).emoji }}</span>
+					<Star v-else-if="note.favorite" :size="20" class="note-list__favorite" />
 					<NoteTextOutline v-else :size="20" />
 				</template>
 				<template #subname>
@@ -113,6 +122,7 @@ import { useNotesStore } from '../stores/notes.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
 import { DRAG_TYPE_NOTE, encodeNoteIds } from '../utils/dragAndDrop.js'
+import { noteListEntry } from '../utils/noteEmoji.js'
 import { tagColor } from '../utils/tags.js'
 
 // Rendering thousands of list items at once is slow, so the list grows on request
@@ -180,6 +190,11 @@ export default {
 
 		visibleNotes() {
 			return this.notes.slice(0, this.limit)
+		},
+
+		listEntries() {
+			const detectLeadingEmoji = this.settingsStore.local.detectLeadingEmoji
+			return new Map(this.visibleNotes.map((note) => [note.id, noteListEntry(note, detectLeadingEmoji)]))
 		},
 	},
 
@@ -270,6 +285,16 @@ export default {
 
 .note-list__favorite {
 	color: var(--color-favorite, #a08b00);
+}
+
+.note-list__emoji {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	font-size: 18px;
+	line-height: 1;
 }
 
 .note-list__category {

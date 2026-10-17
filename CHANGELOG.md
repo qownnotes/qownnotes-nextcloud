@@ -1,5 +1,12 @@
 # QOwnNotes for Nextcloud Changelog
 
+## 26.10.2
+
+- Notes whose title starts with an emoji, like `# 🛒 Shopping`, show the emoji as icon in the note list instead of
+  the note icon, like in QOwnNotes Desktop; the emoji is taken from the headline of the note, so it also works if
+  QOwnNotes Desktop removed it from the file name. Sync conflict copies like `TODO (conflicted copy 2026-07-10 070952)`
+  are marked with ⚠️. The emoji icons can be turned off in the menu of the note list
+
 ## 26.10.1
 
 - Code blocks are syntax highlighted in the editor and the preview, with colors for light and dark themes;
