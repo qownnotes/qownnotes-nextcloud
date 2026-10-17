@@ -41,6 +41,36 @@ test('the app can be hidden from the app navigation in the settings', async ({ p
 	}
 })
 
+test('the editor cursor follows light and dark theme colors without reloading', async ({ page, baseURL }) => {
+	const api = await apiClient(baseURL)
+	let note
+	try {
+		note = await api.post('notes', { title: uniqueName('UI cursor'), content: 'Check the cursor' })
+		await login(page)
+		await page.goto(`${APP_PATH}/note/${note.id}`)
+		const editor = page.locator('.markdown-editor')
+		const content = editor.locator('.cm-content')
+		await content.click()
+		const cursor = editor.locator('.cm-cursor-primary')
+		await expect(cursor).toBeVisible()
+		// Nextcloud changes these CSS variables when switching themes.
+		for (const [text, background] of [['rgb(238, 238, 238)', 'rgb(24, 24, 24)'], ['rgb(34, 34, 34)', 'rgb(255, 255, 255)']]) {
+			await editor.evaluate((element, colors) => {
+				element.style.setProperty('--color-main-text', colors.text)
+				element.style.setProperty('--color-main-background', colors.background)
+			}, { text, background })
+			await expect(editor.locator('.cm-editor')).toHaveCSS('background-color', background)
+			await expect(content).toHaveCSS('color', text)
+			await expect(cursor).toHaveCSS('border-left-color', text)
+		}
+	} finally {
+		if (note) {
+			await api.delete(`notes/${note.id}`)
+		}
+		await api.dispose()
+	}
+})
+
 for (const width of [1400, 390]) {
 	test.describe(`UI at ${width}px`, () => {
 		test.use({ viewport: { width, height: 844 } })

@@ -30,6 +30,10 @@ const theme = EditorView.theme({
 		padding: '16px 0',
 		caretColor: 'var(--color-main-text)',
 	},
+	// drawSelection renders its own cursor instead of the native caret
+	'.cm-cursor, .cm-dropCursor': {
+		borderLeftColor: 'var(--color-main-text)',
+	},
 	'.cm-line': {
 		padding: '0 4px',
 	},
