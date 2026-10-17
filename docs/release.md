@@ -78,7 +78,7 @@ Replace the example version as appropriate. Never replace published assets to fi
 
    The archive only contains the files listed in [`release-files.txt`](../release-files.txt). It is stored as `build/qownnotes-<version>.tar.gz`, its signature for the app store as `build/qownnotes-<version>.tar.gz.sig`.
 
-   Every manifest entry must exist. Styles are part of the frontend bundle in `js/`; add `l10n` to the manifest when generated translations are introduced (there are none yet).
+   Every manifest entry must exist. Styles are part of the frontend bundle in `js/`; generated translations in `l10n/` are also included. Run `python3 scripts/generate-translations.py --check` to verify that the catalogs match their sources (see [translations](translations.md)).
 
 4. Verify the signed archive in Nextcloud before publication. For a wholly local release, create the GitHub release manually, use the matching changelog section for its description and attach the archive. Do not race the automated workflow or upload a locally rebuilt archive into a CI-created release. If using the local path instead of CI, do not push to `release` until you have intentionally disabled the automated workflow.
 5. Upload the release in the [app store](https://apps.nextcloud.com/developer/apps/releases/new) with the public download URL of the archive (`https://github.com/qownnotes/qownnotes-nextcloud/releases/download/v<version>/qownnotes-<version>.tar.gz`) and the signature, or use `scripts/publish-appstore.py` as above.

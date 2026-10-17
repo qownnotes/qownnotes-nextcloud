@@ -7,7 +7,7 @@ import { recommendedJavascript } from '@nextcloud/eslint-config'
 
 export default [
 	{
-		ignores: ['js/**', 'vendor/**', 'node_modules/**', '.devenv/**', 'tests/e2e/playwright-report/**', 'tests/e2e/test-results/**'],
+		ignores: ['js/**', 'l10n/**', 'vendor/**', 'node_modules/**', '.devenv/**', 'tests/e2e/playwright-report/**', 'tests/e2e/test-results/**'],
 	},
 	...recommendedJavascript,
 ]

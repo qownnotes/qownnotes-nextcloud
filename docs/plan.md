@@ -351,7 +351,7 @@ With these endpoints Android can later stop downloading and uploading the whole 
 - Side panels: version history and trash (backed by the same services as the QOwnNotes API, with diff view), note info (path, size, modified, tags).
 - Actions: create, rename (renames file and relinks tags), move between subfolders (drag and drop), delete (to trash), favorite, tag, insert image (upload to `media/`), copy WebDAV/share link (`OCS files_sharing`).
 - Accessibility and keyboard shortcuts aligned with QOwnNotes Desktop where sensible (`Ctrl+N`, `Ctrl+F`, `Ctrl+Shift+F`).
-- l10n via Nextcloud translation tooling (`l10n/` generated, never hand-edited).
+- l10n in Nextcloud's JS/JSON catalog format (`l10n/` generated, never hand-edited); translation sources and regeneration are described in [translations.md](translations.md).
 
 ### 4.13 Security
 

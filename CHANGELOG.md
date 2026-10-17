@@ -2,6 +2,8 @@
 
 ## 26.10.2
 
+- The web interface, admin settings and Nextcloud integrations are translated into German, Simplified Chinese,
+  Russian, Italian, Brazilian Portuguese, Polish, French and Spanish, following the user's Nextcloud language
 - Notes whose title starts with an emoji, like `# 🛒 Shopping`, show the emoji as icon in the note list instead of
   the note icon, like in QOwnNotes Desktop; the emoji is taken from the headline of the note, so it also works if
   QOwnNotes Desktop removed it from the file name. Sync conflict copies like `TODO (conflicted copy 2026-07-10 070952)`

@@ -4,6 +4,7 @@ appinfo
 img
 js
 lib
+l10n
 templates
 CHANGELOG.md
 COPYING
