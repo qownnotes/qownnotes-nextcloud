@@ -8,7 +8,8 @@ set -eu
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 APP_SOURCE=${1:-$(dirname "${SCRIPT_DIR}")}
 APP_SOURCE=$(CDPATH='' cd -- "${APP_SOURCE}" && pwd)
-VERSION=$(python3 "${SCRIPT_DIR}/check-release.py" --root "${APP_SOURCE}" --built)
+# Continuous builds are made between releases, so the changelog may already have a section for the next version
+VERSION=$(python3 "${SCRIPT_DIR}/check-release.py" --root "${APP_SOURCE}" --built --allow-unreleased)
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "${WORK_DIR}"' EXIT
 APP_DEST=${WORK_DIR}/qownnotes

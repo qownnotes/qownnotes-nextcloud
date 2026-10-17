@@ -226,6 +226,18 @@ class ReleaseCheckTest(unittest.TestCase):
             check=True,
         )
 
+    def test_package_allows_unreleased_changelog_section(self):
+        path = self.root / "CHANGELOG.md"
+        path.write_text("## 26.10.1\n\n- Next release\n\n" + path.read_text())
+        result = subprocess.run(
+            ["sh", str(SCRIPT.with_name("package-app.sh")), str(self.root)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Packaged unsigned app 26.10.0", result.stdout)
+
     def test_package_fails_without_frontend(self):
         (self.root / "js/qownnotes-main.mjs").unlink()
         result = subprocess.run(
