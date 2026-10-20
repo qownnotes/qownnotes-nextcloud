@@ -12,7 +12,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, Prec } from '@codemirror/state'
 import { drawSelection, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
-import { insertCodeBlock, insertTaskAbove, linkClicking, markdownEditorHighlighting, openLinkAtCursor, toggleTaskCheckbox } from '../utils/markdownEditor.js'
+import { insertCodeBlock, insertTaskAbove, linkClicking, markdownEditorHighlighting, openLinkAtCursor, toggleTaskCheckbox, toggleTaskList } from '../utils/markdownEditor.js'
 import { createSearchPanel, searchPanelTheme } from '../utils/searchPanel.js'
 
 const theme = EditorView.theme({
@@ -127,6 +127,7 @@ export default {
 					searchPanelTheme,
 					Prec.highest(keymap.of([{ key: 'Enter', run: insertTaskAbove }])),
 					keymap.of([
+						{ key: 'Alt-l', run: toggleTaskList, preventDefault: true },
 						{ key: 'Mod-Shift-c', run: insertCodeBlock, preventDefault: true },
 						{ key: 'Mod-l', run: () => this.openLinkDialog(), preventDefault: true },
 						{ key: 'Mod-Shift-l', run: () => this.openLinkDialog('note'), preventDefault: true },
@@ -159,6 +160,12 @@ export default {
 	},
 
 	methods: {
+		toggleTaskList() {
+			if (this.view && toggleTaskList(this.view)) {
+				this.view.focus()
+			}
+		},
+
 		insertCode() {
 			if (this.view && insertCodeBlock(this.view)) {
 				this.view.focus()

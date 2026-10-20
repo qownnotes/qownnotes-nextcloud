@@ -8,7 +8,7 @@ import { EditorSelection, EditorState } from '@codemirror/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createApp, h } from 'vue'
 import MarkdownEditor from '../../src/components/MarkdownEditor.vue'
-import { insertTaskAbove, markdownEditorHighlighting, toggleTaskCheckbox } from '../../src/utils/markdownEditor.js'
+import { insertTaskAbove, markdownEditorHighlighting, toggleTaskCheckbox, toggleTaskList } from '../../src/utils/markdownEditor.js'
 
 /**
  * A command target that applies real CodeMirror transactions without a DOM.
@@ -123,6 +123,70 @@ describe('task checkbox command', () => {
 	})
 })
 
+describe('task list formatting command', () => {
+	it.each([
+		['', '- [ ] ', '- '],
+		['text', '- [ ] text', '- text'],
+		['  text', '  - [ ] text', '  - text'],
+		['- item', '- [ ] item', '- item'],
+		['* item', '* [ ] item', '* item'],
+		['+ item', '+ [ ] item', '+ item'],
+		['2) item', '2) [ ] item', '2) item'],
+		['12. item', '12. [ ] item', '12. item'],
+		['- parent\n  - nested', '- parent\n  - [ ] nested', '- parent\n  - nested'],
+		['> > - quoted', '> > - [ ] quoted', '> > - quoted'],
+		['- ', '- [ ] ', '- '],
+		['-', '- [ ] ', '- '],
+	])('creates and toggles a task from %j', (doc, task, list) => {
+		const view = editor(doc)
+		expect(toggleTaskList(view)).toBe(true)
+		expect(view.state.doc.toString()).toBe(task)
+		expect(view.state.selection.main.head).toBe(task.length)
+		expect(undo(view)).toBe(true)
+		expect(view.state.doc.toString()).toBe(doc)
+		expect(view.state.selection.main.head).toBe(doc.length)
+		toggleTaskList(view)
+		toggleTaskList(view)
+		expect(view.state.doc.toString()).toBe(list)
+		toggleTaskList(view)
+		expect(view.state.doc.toString()).toBe(task)
+	})
+
+	it.each([' ', 'x', 'X'])('removes a checkbox marked %j without removing its text', (mark) => {
+		const view = editor(`- [${mark}] item`, 8)
+		toggleTaskList(view)
+		expect(view.state.doc.toString()).toBe('- item')
+		expect(view.state.selection.main.head).toBe(4)
+	})
+
+	it('positions the cursor after a new prefix at the start of a line', () => {
+		const view = editor('text', 0)
+		toggleTaskList(view)
+		expect(view.state.selection.main.head).toBe(6)
+	})
+
+	it('formats selected lines once and excludes an unselected trailing line', () => {
+		const view = editor('first\nsecond\nthird')
+		view.dispatch({ selection: EditorSelection.range(0, 13) })
+		toggleTaskList(view)
+		expect(view.state.doc.toString()).toBe('- [ ] first\n- [ ] second\nthird')
+		expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe('first\n- [ ] second\n')
+	})
+
+	it('formats a line only once with multiple cursors', () => {
+		const view = editor('first\nsecond')
+		view.dispatch({ selection: EditorSelection.create([EditorSelection.cursor(0), EditorSelection.cursor(4), EditorSelection.cursor(8)]) })
+		toggleTaskList(view)
+		expect(view.state.doc.toString()).toBe('- [ ] first\n- [ ] second')
+	})
+
+	it('does not change read-only notes', () => {
+		const view = editor('text', 0, true)
+		expect(toggleTaskList(view)).toBe(false)
+		expect(view.state.doc.toString()).toBe('text')
+	})
+})
+
 let app
 let container
 afterEach(() => {
@@ -131,6 +195,39 @@ afterEach(() => {
 })
 
 describe('editor checkbox shortcut', () => {
+	it.each(['shortcut', 'menu command'])('toggles task list formatting using the %s', (action) => {
+		container = document.createElement('div')
+		document.body.append(container)
+		app = createApp(MarkdownEditor, { modelValue: '' })
+		const component = app.mount(container)
+		const run = () => {
+			if (action === 'menu command') {
+				component.toggleTaskList()
+				expect(component.view.hasFocus).toBe(true)
+			} else {
+				const event = new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', altKey: true, bubbles: true, cancelable: true })
+				component.view.contentDOM.dispatchEvent(event)
+				expect(event.defaultPrevented).toBe(true)
+			}
+		}
+		run()
+		expect(component.view.state.doc.toString()).toBe('- [ ] ')
+		run()
+		expect(component.view.state.doc.toString()).toBe('- ')
+		run()
+		expect(component.view.state.doc.toString()).toBe('- [ ] ')
+	})
+
+	it('does not change read-only notes with Alt+L or the menu command', () => {
+		container = document.createElement('div')
+		document.body.append(container)
+		app = createApp(MarkdownEditor, { modelValue: 'text', readonly: true })
+		const component = app.mount(container)
+		component.view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', altKey: true, bubbles: true, cancelable: true }))
+		component.toggleTaskList()
+		expect(component.view.state.doc.toString()).toBe('text')
+	})
+
 	it.each([
 		[0, '- [ ] \n- [x] task'],
 		[6, '- [ ] \n- [x] task'],

@@ -57,6 +57,12 @@
 						</template>
 					</NcButton>
 					<NcActions>
+						<NcActionButton v-if="!note.readonly" closeAfterClick @click="toggleTaskList">
+							<template #icon>
+								<FormatListCheckbox :size="20" />
+							</template>
+							{{ t('qownnotes', 'Toggle checkbox list item') }} (Alt+L)
+						</NcActionButton>
 						<NcActionButton v-if="!note.readonly" closeAfterClick @click="insertCode">
 							<template #icon>
 								<CodeTags :size="20" />
@@ -176,6 +182,7 @@ import CodeTags from 'vue-material-design-icons/CodeTags.vue'
 import Delete from 'vue-material-design-icons/Delete.vue'
 import EyeOutline from 'vue-material-design-icons/EyeOutline.vue'
 import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
+import FormatListCheckbox from 'vue-material-design-icons/FormatListCheckbox.vue'
 import ImagePlus from 'vue-material-design-icons/ImagePlus.vue'
 import InformationOutline from 'vue-material-design-icons/InformationOutline.vue'
 import LinkVariant from 'vue-material-design-icons/LinkVariant.vue'
@@ -209,6 +216,7 @@ export default {
 		DiffView,
 		EyeOutline,
 		FolderOutline,
+		FormatListCheckbox,
 		ImagePlus,
 		InformationOutline,
 		LinkDialog,
@@ -387,6 +395,17 @@ export default {
 
 	methods: {
 		t,
+
+		async toggleTaskList() {
+			if (this.note.readonly) {
+				return
+			}
+			if (!this.$refs.editor) {
+				this.settingsStore.setLocal('preview', false)
+				await this.$nextTick()
+			}
+			this.$refs.editor?.toggleTaskList()
+		},
 
 		async insertCode() {
 			if (this.note.readonly) {

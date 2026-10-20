@@ -287,6 +287,43 @@ export function toggleTaskCheckbox(view) {
 }
 
 /**
+ * Turns plain lines into tasks and toggles task/normal list formatting.
+ * Preserves list markers, indentation, quotes and selected text.
+ *
+ * @param {import('@codemirror/view').EditorView} view editor view
+ * @return {boolean} whether list formatting was changed
+ */
+export function toggleTaskList(view) {
+	const { state } = view
+	if (state.readOnly) {
+		return false
+	}
+
+	const lines = new Map()
+	for (const range of state.selection.ranges) {
+		const first = state.doc.lineAt(range.from).number
+		const last = state.doc.lineAt(range.empty ? range.to : Math.max(range.from, range.to - 1)).number
+		for (let number = first; number <= last; number++) {
+			lines.set(number, state.doc.line(number))
+		}
+	}
+	const changes = []
+	for (const line of lines.values()) {
+		const [prefix, , marker, spacing] = /^([ \t]*(?:>[ \t]*)*)(?:([-+*]|\d+[.)])([ \t]+|$))?/.exec(line.text)
+		const from = line.from + prefix.length
+		const task = marker && /^\[[ xX]\](?:[ \t]+|$)/.exec(line.text.slice(prefix.length))
+		if (task) {
+			changes.push({ from, to: from + task[0].length, insert: '' })
+		} else {
+			changes.push({ from, insert: marker ? (spacing ? '' : ' ') + '[ ] ' : '- [ ] ' })
+		}
+	}
+	const changeSet = state.changes(changes.sort((a, b) => a.from - b.from))
+	view.dispatch({ changes: changeSet, selection: state.selection.map(changeSet, 1), scrollIntoView: true, userEvent: 'input.toggleTaskList' })
+	return true
+}
+
+/**
  * The link at a position of the note text: the target of a Markdown link or image, an autolink or a plain URL
  *
  * @param {import('@codemirror/state').EditorState} state the editor state
