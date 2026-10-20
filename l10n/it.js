@@ -43,6 +43,7 @@ OC.L10N.register(
     "Hide QOwnNotes from the app navigation": "Nascondi QOwnNotes dalla navigazione delle app",
     "Ignored subfolders": "Sottocartelle ignorate",
     "Include notes of child tags": "Includi le note delle sottoetichette",
+    "Insert code": "Inserisci codice",
     "Insert image or attachment": "Inserisci immagine o allegato",
     "Insert link": "Inserisci collegamento",
     "Keep my version": "Mantieni la mia versione",

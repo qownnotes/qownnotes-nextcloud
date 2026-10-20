@@ -159,6 +159,12 @@ export default {
 	},
 
 	methods: {
+		insertCode() {
+			if (this.view && insertCodeBlock(this.view)) {
+				this.view.focus()
+			}
+		},
+
 		openLinkDialog(tab = 'web') {
 			if (this.view.state.readOnly) {
 				return false

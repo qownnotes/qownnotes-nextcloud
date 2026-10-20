@@ -17,7 +17,7 @@ afterEach(() => {
 	container?.remove()
 })
 
-describe('editor code shortcut', () => {
+describe.each(['shortcut', 'menu command'])('editor code %s', (action) => {
 	it.each([
 		['', 0, 0, '```\n\n```', 4],
 		['text', 0, 0, '```\n\n```\ntext', 4],
@@ -41,8 +41,13 @@ describe('editor code shortcut', () => {
 		const editor = app.mount(container)
 		editor.view.dispatch({ selection: EditorSelection.range(anchor, head) })
 		const event = new KeyboardEvent('keydown', { key: 'C', code: 'KeyC', keyCode: 67, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true })
-		editor.view.contentDOM.dispatchEvent(event)
-		expect(event.defaultPrevented).toBe(true)
+		if (action === 'shortcut') {
+			editor.view.contentDOM.dispatchEvent(event)
+			expect(event.defaultPrevented).toBe(true)
+		} else {
+			editor.insertCode()
+			expect(editor.view.hasFocus).toBe(true)
+		}
 		expect(updates).toEqual([expected])
 		expect(editor.view.state.selection.main.head).toBe(cursor)
 		expect(undo(editor.view)).toBe(true)
@@ -57,6 +62,7 @@ describe('editor code shortcut', () => {
 		app = createApp(MarkdownEditor, { modelValue: 'Read only', readonly: true })
 		const editor = app.mount(container)
 		editor.view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'C', code: 'KeyC', keyCode: 67, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }))
+		editor.insertCode()
 		expect(editor.view.state.doc.toString()).toBe('Read only')
 	})
 })

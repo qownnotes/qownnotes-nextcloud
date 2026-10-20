@@ -57,6 +57,12 @@
 						</template>
 					</NcButton>
 					<NcActions>
+						<NcActionButton v-if="!note.readonly" closeAfterClick @click="insertCode">
+							<template #icon>
+								<CodeTags :size="20" />
+							</template>
+							{{ t('qownnotes', 'Insert code') }} (Ctrl+Shift+C)
+						</NcActionButton>
 						<NcActionButton v-if="!note.readonly" closeAfterClick @click="showLinkDialog()">
 							<template #icon>
 								<LinkVariant :size="20" />
@@ -160,6 +166,7 @@ import NcActionInput from '@nextcloud/vue/components/NcActionInput'
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
+import CodeTags from 'vue-material-design-icons/CodeTags.vue'
 import Delete from 'vue-material-design-icons/Delete.vue'
 import EyeOutline from 'vue-material-design-icons/EyeOutline.vue'
 import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
@@ -191,6 +198,7 @@ export default {
 	name: 'NoteEditor',
 
 	components: {
+		CodeTags,
 		Delete,
 		DiffView,
 		EyeOutline,
@@ -373,6 +381,17 @@ export default {
 
 	methods: {
 		t,
+
+		async insertCode() {
+			if (this.note.readonly) {
+				return
+			}
+			if (!this.$refs.editor) {
+				this.settingsStore.setLocal('preview', false)
+				await this.$nextTick()
+			}
+			this.$refs.editor?.insertCode()
+		},
 
 		async showLinkDialog(selection, tab = 'web') {
 			if (this.note.readonly) {
