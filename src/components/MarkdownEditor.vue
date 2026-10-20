@@ -89,7 +89,7 @@ export default {
 		},
 	},
 
-	emits: ['update:modelValue', 'scroll', 'openLink'],
+	emits: ['update:modelValue', 'scroll', 'openLink', 'insertLink'],
 
 	watch: {
 		modelValue(value) {
@@ -127,6 +127,8 @@ export default {
 					searchPanelTheme,
 					Prec.highest(keymap.of([{ key: 'Enter', run: insertTaskAbove }])),
 					keymap.of([
+						{ key: 'Mod-l', run: () => this.openLinkDialog(), preventDefault: true },
+						{ key: 'Mod-Shift-l', run: () => this.openLinkDialog('note'), preventDefault: true },
 						// Like in QOwnNotes Desktop, Ctrl+Space toggles a checkbox or follows the link at the cursor
 						{ key: 'Ctrl-Space', run: (view) => toggleTaskCheckbox(view) || openLinkAtCursor(view, openLink), preventDefault: true },
 						...defaultKeymap,
@@ -156,6 +158,23 @@ export default {
 	},
 
 	methods: {
+		openLinkDialog(tab = 'web') {
+			if (this.view.state.readOnly) {
+				return false
+			}
+			const { from, to } = this.view.state.selection.main
+			this.$emit('insertLink', this.view.state.sliceDoc(from, to), tab)
+			return true
+		},
+
+		selectedText() {
+			if (!this.view) {
+				return ''
+			}
+			const { from, to } = this.view.state.selection.main
+			return this.view.state.sliceDoc(from, to)
+		},
+
 		readonlyExtensions(readonly) {
 			return [EditorState.readOnly.of(readonly), EditorView.editable.of(!readonly)]
 		},
@@ -249,7 +268,7 @@ export default {
 		 * @param {string} text the text
 		 */
 		insertText(text) {
-			if (!this.view) {
+			if (!this.view || this.view.state.readOnly) {
 				return
 			}
 			this.view.dispatch(this.view.state.replaceSelection(text))

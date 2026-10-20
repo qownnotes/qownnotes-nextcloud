@@ -13,6 +13,7 @@ return ['routes' => [
 	['name' => 'page#index', 'url' => '/note/{id}', 'verb' => 'GET', 'postfix' => 'note', 'requirements' => ['id' => '\d+']],
 	['name' => 'page#index', 'url' => '/folder', 'verb' => 'GET', 'postfix' => 'root'],
 	['name' => 'page#index', 'url' => '/folder/{path}', 'verb' => 'GET', 'postfix' => 'folder', 'requirements' => ['path' => '.+']],
+	['name' => 'link#title', 'url' => '/link/title', 'verb' => 'POST'],
 
 	// Admin settings
 	['name' => 'admin_settings#save', 'url' => '/admin/settings', 'verb' => 'POST'],

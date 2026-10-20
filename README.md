@@ -49,6 +49,13 @@ Fenced code blocks with a language label (for example, `js`, `python` or `php`) 
 
 Press **Ctrl+F** to search in the note: Enter and Shift+Enter jump between the matches, the buttons in the search field match case, whole words or regular expressions, and the arrow on the left shows the replace field.
 
+Press **Ctrl+L** (**Cmd+L** on macOS) in the editor, or choose **Insert link** in the note actions, to open the link dialog.
+The **Web link** tab fetches the page title automatically when the link text is empty; **Fetch title** fetches it again.
+You can edit the link text or enter it yourself if fetching fails. Selected text becomes the link text, or the URL if it is a web address.
+The **Link to note** tab searches all note subfolders and inserts a relative file link compatible with QOwnNotes Desktop.
+Press **Ctrl+Shift+L** (**Cmd+Shift+L** on macOS) to open that tab directly.
+Inserting replaces the selection and can be undone like a normal edit. Title fetching only accesses public HTTP(S) pages, without forwarding your session credentials.
+
 Press **Ctrl+Space** with the cursor on a task line to check or uncheck its checkbox (`- [ ]` / `- [x]`).
 This also works for nested tasks and tasks in blockquotes or numbered lists, and can be undone like a normal edit.
 

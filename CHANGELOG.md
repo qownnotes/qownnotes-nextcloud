@@ -1,5 +1,11 @@
 # QOwnNotes for Nextcloud Changelog
 
+## Unreleased
+
+- Ctrl+L (Cmd+L on macOS) opens a link dialog with web page title fetching and a searchable **Link to note** tab,
+  inserting relative file links compatible with QOwnNotes Desktop
+- Ctrl+Shift+L (Cmd+Shift+L on macOS) opens the **Link to note** tab directly
+
 ## 26.10.2
 
 - The web interface, admin settings and Nextcloud integrations are translated into German, Simplified Chinese,

@@ -10,6 +10,8 @@ The app serves two APIs under one base URL:
 
 How the tags in `notes.sqlite` are read and written is described in [notes-sqlite.md](../notes-sqlite.md).
 
+The web interface also has an internal, CSRF-protected [link title endpoint](web-api.md), available only when the web interface is enabled.
+
 ## Base URL
 
 ```

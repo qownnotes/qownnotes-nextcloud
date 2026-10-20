@@ -57,6 +57,12 @@
 						</template>
 					</NcButton>
 					<NcActions>
+						<NcActionButton v-if="!note.readonly" closeAfterClick @click="showLinkDialog()">
+							<template #icon>
+								<LinkVariant :size="20" />
+							</template>
+							{{ t('qownnotes', 'Insert link') }} (Ctrl+L)
+						</NcActionButton>
 						<NcActionInput
 							v-if="!note.readonly"
 							v-model="newTitle"
@@ -92,6 +98,7 @@
 				:readonly="note.readonly"
 				:placeholder="t('qownnotes', 'Write your note …')"
 				@scroll="onEditorScroll"
+				@insertLink="showLinkDialog"
 				@openLink="openLink" />
 			<NotePreview
 				v-if="preview"
@@ -132,6 +139,15 @@
 			:message="t('qownnotes', 'Do you want to delete the note \u201C{title}\u201D?', { title: note.title })"
 			:buttons="deleteButtons"
 			@update:open="deleteDialogOpen = false" />
+		<LinkDialog
+			v-if="linkDialogOpen"
+			:notes="notesStore.list"
+			:noteId="noteId"
+			:category="note.category ?? ''"
+			:selection="linkSelection"
+			:initialTab="linkTab"
+			@insert="insertLink"
+			@close="closeLinkDialog" />
 	</div>
 </template>
 
@@ -149,10 +165,12 @@ import EyeOutline from 'vue-material-design-icons/EyeOutline.vue'
 import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
 import ImagePlus from 'vue-material-design-icons/ImagePlus.vue'
 import InformationOutline from 'vue-material-design-icons/InformationOutline.vue'
+import LinkVariant from 'vue-material-design-icons/LinkVariant.vue'
 import PencilOutline from 'vue-material-design-icons/PencilOutline.vue'
 import Star from 'vue-material-design-icons/Star.vue'
 import StarOutline from 'vue-material-design-icons/StarOutline.vue'
 import DiffView from './DiffView.vue'
+import LinkDialog from './LinkDialog.vue'
 import MarkdownEditor from './MarkdownEditor.vue'
 import NotePreview from './NotePreview.vue'
 import NoteTagEditor from './NoteTagEditor.vue'
@@ -179,6 +197,8 @@ export default {
 		FolderOutline,
 		ImagePlus,
 		InformationOutline,
+		LinkDialog,
+		LinkVariant,
 		MarkdownEditor,
 		NcActionButton,
 		NcActionInput,
@@ -223,6 +243,9 @@ export default {
 			conflict: null,
 			newTitle: note?.title ?? '',
 			deleteDialogOpen: false,
+			linkDialogOpen: false,
+			linkSelection: '',
+			linkTab: 'web',
 		}
 	},
 
@@ -350,6 +373,30 @@ export default {
 
 	methods: {
 		t,
+
+		async showLinkDialog(selection, tab = 'web') {
+			if (this.note.readonly) {
+				return
+			}
+			if (!this.$refs.editor) {
+				this.settingsStore.setLocal('preview', false)
+				await this.$nextTick()
+			}
+			this.linkSelection = selection ?? this.$refs.editor?.selectedText() ?? ''
+			this.linkTab = tab
+			this.linkDialogOpen = true
+		},
+
+		insertLink(text) {
+			if (!this.note.readonly) {
+				this.$refs.editor?.insertText(text)
+			}
+		},
+
+		closeLinkDialog() {
+			this.linkDialogOpen = false
+			this.$nextTick(() => this.$refs.editor?.focus())
+		},
 
 		scheduleSave() {
 			window.clearTimeout(this.saveTimer)

@@ -14,6 +14,17 @@ export const API_BASE = generateUrl('/apps/qownnotes/api/v1')
 const RELINK_HEADERS = { 'X-QOwnNotes-Relink-Tags': '1' }
 
 /**
+ * Fetches a public web page's title through the server (no browser CORS restrictions).
+ *
+ * @param {string} url HTTP(S) URL
+ * @param {AbortSignal} signal cancellation signal
+ * @return {Promise<string>}
+ */
+export async function fetchLinkTitle(url, signal) {
+	return (await axios.post(generateUrl('/apps/qownnotes/link/title'), { url }, { signal })).data.title
+}
+
+/**
  * All notes (Notes API); notes that didn't change since `pruneBefore` only contain their ID
  *
  * @param {number} pruneBefore Unix timestamp of the last sync, 0 for all notes
