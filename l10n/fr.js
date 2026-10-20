@@ -155,6 +155,7 @@ OC.L10N.register(
     "The versions app may be disabled": "L’application de gestion des versions est peut-être désactivée",
     "This version is not supported for changes, so tags are read-only. Please update the app.": "Cette version ne permet pas les modifications, les étiquettes sont donc en lecture seule. Veuillez mettre à jour l’application.",
     "Title style for new notes": "Style du titre des nouvelles notes",
+    "Toggle checkbox list item": "Activer/désactiver la case à cocher de l’élément de liste",
     "Toggle replace": "Afficher ou masquer le remplacement",
     "Try another search term or check your filters": "Essayez un autre terme de recherche ou vérifiez vos filtres",
     "URL": "URL",

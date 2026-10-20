@@ -155,6 +155,7 @@ OC.L10N.register(
     "The versions app may be disabled": "“版本”应用可能已禁用",
     "This version is not supported for changes, so tags are read-only. Please update the app.": "此版本不支持更改，因此标签为只读。请更新应用。",
     "Title style for new notes": "新笔记的标题样式",
+    "Toggle checkbox list item": "切换复选框列表项",
     "Toggle replace": "切换替换栏",
     "Try another search term or check your filters": "尝试其他搜索词或检查筛选条件",
     "URL": "网址",

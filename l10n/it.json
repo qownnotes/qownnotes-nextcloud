@@ -153,6 +153,7 @@
         "The versions app may be disabled": "L’app delle versioni potrebbe essere disabilitata",
         "This version is not supported for changes, so tags are read-only. Please update the app.": "Questa versione non supporta le modifiche, quindi le etichette sono in sola lettura. Aggiorna l’app.",
         "Title style for new notes": "Stile del titolo delle nuove note",
+        "Toggle checkbox list item": "Attiva/disattiva casella di controllo della voce di elenco",
         "Toggle replace": "Mostra o nascondi sostituzione",
         "Try another search term or check your filters": "Prova un altro termine di ricerca o controlla i filtri",
         "URL": "URL",

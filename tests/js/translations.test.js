@@ -31,7 +31,7 @@ describe.each(Object.entries(languages))('%s translations', (language, indices) 
 		const script = readFileSync(new URL(`../../l10n/${language}.js`, import.meta.url), 'utf8')
 		runInNewContext(script, { OC: { L10N: { register } } })
 		expect(register).toHaveBeenCalledExactlyOnceWith('qownnotes', catalog.translations, catalog.pluralForm)
-		expect(Object.keys(catalog.translations)).toHaveLength(171)
+		expect(Object.keys(catalog.translations)).toHaveLength(172)
 	})
 
 	it('selects the correct plural forms, including zero and large counts', () => {

@@ -153,6 +153,7 @@
         "The versions app may be disabled": "Возможно, приложение «Версии» отключено",
         "This version is not supported for changes, so tags are read-only. Please update the app.": "Изменения в этой версии не поддерживаются, поэтому метки доступны только для чтения. Обновите приложение.",
         "Title style for new notes": "Стиль заголовка новых заметок",
+        "Toggle checkbox list item": "Переключить флажок пункта списка",
         "Toggle replace": "Показать или скрыть замену",
         "Try another search term or check your filters": "Попробуйте другой поисковый запрос или проверьте фильтры",
         "URL": "URL",
