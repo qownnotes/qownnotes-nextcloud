@@ -5,6 +5,8 @@
 - Ctrl+L (Cmd+L on macOS) opens a link dialog with web page title fetching and a searchable **Link to note** tab,
   inserting relative file links compatible with QOwnNotes Desktop
 - Ctrl+Shift+L (Cmd+Shift+L on macOS) opens the **Link to note** tab directly
+- Ctrl+Shift+C (Cmd+Shift+C on macOS) inserts inline code within a line or a fenced code block at the start of a line,
+  placing the cursor inside; selected text is wrapped in inline code, or a fenced block for multi-line selections
 
 ## 26.10.2
 

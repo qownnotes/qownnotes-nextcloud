@@ -157,6 +157,40 @@ export function markdownEditorHighlighting() {
 }
 
 /**
+ * Inserts inline code within a line or a fenced block at the start of a line.
+ * Selected text is wrapped in inline code, or a fenced block for multiple lines.
+ *
+ * @param {import('@codemirror/view').EditorView} view editor view
+ * @return {boolean} whether code was inserted
+ */
+export function insertCodeBlock(view) {
+	const { state } = view
+	if (state.readOnly) {
+		return false
+	}
+
+	view.dispatch(state.update(state.changeByRange((range) => {
+		const text = state.sliceDoc(range.from, range.to)
+		const line = state.doc.lineAt(range.from)
+		const block = range.empty ? range.from === line.from : state.doc.lineAt(range.to).number !== line.number
+		let before = '`'
+		let after = '`'
+		if (block) {
+			before = (range.from === line.from ? '' : state.lineBreak) + '```' + state.lineBreak
+			after = (text.endsWith(state.lineBreak) ? '' : state.lineBreak) + '```'
+			if (range.to < state.doc.length && state.doc.lineAt(range.to).to !== range.to) {
+				after += state.lineBreak
+			}
+		}
+		return {
+			changes: { from: range.from, to: range.to, insert: before + text + after },
+			range: EditorSelection.cursor(range.from + before.length + (range.empty ? 0 : text.length + after.length)),
+		}
+	}), { scrollIntoView: true, userEvent: 'input' }))
+	return true
+}
+
+/**
  * Inserts an unchecked task above a task when the cursor precedes its text.
  * Returns false elsewhere so the normal Markdown Enter command can run.
  *
