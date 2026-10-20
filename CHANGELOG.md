@@ -1,6 +1,6 @@
 # QOwnNotes for Nextcloud Changelog
 
-## Unreleased
+## 26.10.3
 
 - Ctrl+L (Cmd+L on macOS) opens a link dialog with web page title fetching and a searchable **Link to note** tab,
   inserting relative file links compatible with QOwnNotes Desktop
@@ -10,6 +10,8 @@
 - Ctrl+Shift+C (Cmd+Shift+C on macOS) inserts inline code within a line or a fenced code block at the start of a line,
   placing the cursor inside; selected text is wrapped in inline code, or a fenced block for multi-line selections
 - The note's "…" menu has an **Insert code** action with the same behavior as Ctrl+Shift+C
+- Alt+L toggles checkbox list formatting on the current line or selected lines, preserving list markers and indentation
+- The note's "…" menu has a translated **Toggle checkbox list item** action with the same behavior as Alt+L
 
 ## 26.10.2
 
