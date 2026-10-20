@@ -54,6 +54,7 @@ The **Web link** tab fetches the page title automatically when the link text is 
 You can edit the link text or enter it yourself if fetching fails. Selected text becomes the link text, or the URL if it is a web address.
 The **Link to note** tab searches all note subfolders and inserts a relative file link compatible with QOwnNotes Desktop.
 Press **Ctrl+Shift+L** (**Cmd+Shift+L** on macOS) to open that tab directly.
+The **Link to note** action in the note's **…** menu opens that tab too.
 Inserting replaces the selection and can be undone like a normal edit. Title fetching only accesses public HTTP(S) pages, without forwarding your session credentials.
 
 Press **Ctrl+Space** with the cursor on a task line to check or uncheck its checkbox (`- [ ]` / `- [x]`).

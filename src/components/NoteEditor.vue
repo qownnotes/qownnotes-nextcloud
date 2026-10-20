@@ -69,6 +69,12 @@
 							</template>
 							{{ t('qownnotes', 'Insert link') }} (Ctrl+L)
 						</NcActionButton>
+						<NcActionButton v-if="!note.readonly" closeAfterClick @click="showLinkDialog(undefined, 'note')">
+							<template #icon>
+								<LinkVariant :size="20" />
+							</template>
+							{{ t('qownnotes', 'Link to note') }} (Ctrl+Shift+L)
+						</NcActionButton>
 						<NcActionInput
 							v-if="!note.readonly"
 							v-model="newTitle"
