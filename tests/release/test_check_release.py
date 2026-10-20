@@ -144,9 +144,34 @@ class ReleaseCheckTest(unittest.TestCase):
             MODULE.check_release(self.root, allow_unreleased=True),
             ("26.10.0", "- Initial release\n"),
         )
-        for newest in ("26.9.1", "Unreleased", "26.13.0"):
+        for newest in ("26.9.1", "Unknown", "26.13.0"):
             with self.subTest(newest=newest):
                 path.write_text(f"## {newest}\n\n- Other\n\n" + original)
+                with self.assertRaisesRegex(ValueError, "newest section must match"):
+                    MODULE.check_release(self.root, allow_unreleased=True)
+
+    def test_named_unreleased_changelog_section(self):
+        path = self.root / "CHANGELOG.md"
+        original = path.read_text()
+        for newer in ("", "## 26.10.1\n\n- Next release\n\n"):
+            with self.subTest(newer=newer):
+                path.write_text("## Unreleased\n\n- Development notes\n\n" + newer + original)
+                self.assertEqual(
+                    MODULE.check_release(self.root, allow_unreleased=True),
+                    ("26.10.0", "- Initial release\n"),
+                )
+                with self.assertRaisesRegex(ValueError, "newest section must match"):
+                    MODULE.check_release(self.root)
+
+    def test_unreleased_must_be_single_leading_section(self):
+        path = self.root / "CHANGELOG.md"
+        original = path.read_text()
+        for prefix in (
+            "## Unreleased\n- One\n## Unreleased\n- Two\n",
+            "## 26.10.1\n- Next release\n## Unreleased\n- Development notes\n",
+        ):
+            with self.subTest(prefix=prefix):
+                path.write_text(prefix + original)
                 with self.assertRaisesRegex(ValueError, "newest section must match"):
                     MODULE.check_release(self.root, allow_unreleased=True)
 
@@ -228,15 +253,18 @@ class ReleaseCheckTest(unittest.TestCase):
 
     def test_package_allows_unreleased_changelog_section(self):
         path = self.root / "CHANGELOG.md"
-        path.write_text("## 26.10.1\n\n- Next release\n\n" + path.read_text())
-        result = subprocess.run(
-            ["sh", str(SCRIPT.with_name("package-app.sh")), str(self.root)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Packaged unsigned app 26.10.0", result.stdout)
+        original = path.read_text()
+        for heading in ("26.10.1", "Unreleased"):
+            with self.subTest(heading=heading):
+                path.write_text(f"## {heading}\n\n- Next release\n\n" + original)
+                result = subprocess.run(
+                    ["sh", str(SCRIPT.with_name("package-app.sh")), str(self.root)],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("Packaged unsigned app 26.10.0", result.stdout)
 
     def test_package_fails_without_frontend(self):
         (self.root / "js/qownnotes-main.mjs").unlink()

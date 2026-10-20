@@ -44,13 +44,18 @@ def check_release(
     matching = [section for section in sections if section.group(1) == version]
     if len(matching) != 1:
         raise ValueError(f"CHANGELOG.md must contain exactly one section for {version}")
-    # Between releases, the notes of the next version are collected in a newer section
-    for section in sections[: sections.index(matching[0])]:
+    # Development changelogs may start with Unreleased or newer version sections.
+    for index, section in enumerate(sections[: sections.index(matching[0])]):
         unreleased = section.group(1)
         if not (
             allow_unreleased
-            and re.fullmatch(CALVER, unreleased)
-            and calver_key(unreleased) > calver_key(version)
+            and (
+                (unreleased == "Unreleased" and index == 0)
+                or (
+                    re.fullmatch(CALVER, unreleased)
+                    and calver_key(unreleased) > calver_key(version)
+                )
+            )
         ):
             raise ValueError(f"CHANGELOG.md newest section must match {version}")
     notes = changelog[matching[0].end() :]
@@ -120,7 +125,7 @@ def main() -> int:
     parser.add_argument(
         "--allow-unreleased",
         action="store_true",
-        help="allow changelog sections of newer, not yet released versions",
+        help="allow a leading Unreleased section and sections of newer versions",
     )
     parser.add_argument(
         "--notes-output", type=Path, help="write the validated release notes"
