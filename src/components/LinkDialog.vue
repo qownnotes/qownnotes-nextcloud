@@ -171,21 +171,48 @@ export default {
 	},
 
 	created() {
+		this.disposed = false
 		this.fetchController = null
 		this.fetchTimer = null
 		this.scheduleFetch()
 	},
 
 	mounted() {
+		document.addEventListener('keydown', this.handleEscape, true)
 		this.$nextTick(() => (this.tab === 'note' ? this.$refs.noteSearch : this.$refs.urlInput)?.focus?.())
+		this.pasteClipboard()
 	},
 
 	beforeUnmount() {
+		this.disposed = true
+		document.removeEventListener('keydown', this.handleEscape, true)
 		this.cancelFetch()
 	},
 
 	methods: {
 		t,
+		handleEscape(event) {
+			if (event.key === 'Escape') {
+				event.preventDefault()
+				event.stopImmediatePropagation()
+				this.$emit('close')
+			}
+		},
+
+		async pasteClipboard() {
+			if (this.tab !== 'web' || this.url) {
+				return
+			}
+			try {
+				const text = await navigator.clipboard?.readText()
+				if (!this.disposed && this.tab === 'web' && !this.url && text) {
+					this.url = text.trim()
+				}
+			} catch {
+				// Clipboard access may be unavailable or denied; manual entry still works.
+			}
+		},
+
 		switchTab() {
 			this.tab = this.tab === 'web' ? 'note' : 'web'
 			this.$nextTick(() => document.getElementById(`link-tab-${this.tab}`)?.focus())

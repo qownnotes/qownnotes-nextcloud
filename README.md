@@ -52,6 +52,7 @@ Press **Ctrl+F** to search in the note: Enter and Shift+Enter jump between the m
 Press **Ctrl+L** (**Cmd+L** on macOS) in the editor, or choose **Insert link** in the note actions, to open the link dialog.
 The **Web link** tab fetches the page title automatically when the link text is empty; **Fetch title** fetches it again.
 You can edit the link text or enter it yourself if fetching fails. Selected text becomes the link text, or the URL if it is a web address.
+When opening the **Web link** tab, clipboard text fills an empty URL field if the browser allows clipboard access. Press **Escape** to close the dialog and return to the editor.
 The **Link to note** tab searches all note subfolders and inserts a relative file link compatible with QOwnNotes Desktop.
 Press **Ctrl+Shift+L** (**Cmd+Shift+L** on macOS) to open that tab directly.
 The **Link to note** action in the note's **…** menu opens that tab too.

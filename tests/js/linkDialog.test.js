@@ -26,16 +26,20 @@ vi.mock('@nextcloud/vue/components/NcTextField', () => ({
 
 let app
 let container
+let readClipboard
 
 beforeEach(() => {
 	vi.useFakeTimers()
 	vi.mocked(fetchLinkTitle).mockReset()
+	readClipboard = vi.fn().mockResolvedValue('')
+	vi.stubGlobal('navigator', { clipboard: { readText: readClipboard } })
 })
 
 afterEach(() => {
 	app?.unmount()
 	container?.remove()
 	vi.useRealTimers()
+	vi.unstubAllGlobals()
 })
 
 /**
@@ -50,6 +54,81 @@ function mountDialog(props = {}) {
 	app = createApp({ render: () => h(LinkDialog, { notes: [], noteId: 1, ...props }) })
 	return app.mount(container).$.subTree.component.proxy
 }
+
+it('prefills clipboard text and automatically fetches a web title', async () => {
+	readClipboard.mockResolvedValue(' https://example.com\n')
+	vi.mocked(fetchLinkTitle).mockResolvedValue('Clipboard title')
+	const dialog = mountDialog()
+	await vi.advanceTimersByTimeAsync(600)
+	expect(dialog.url).toBe('https://example.com')
+	expect(dialog.title).toBe('Clipboard title')
+})
+
+it('keeps selected link text when prefilling the clipboard URL', async () => {
+	readClipboard.mockResolvedValue('https://example.com')
+	const dialog = mountDialog({ selection: 'Selected text' })
+	await vi.advanceTimersByTimeAsync(600)
+	expect(dialog.url).toBe('https://example.com')
+	expect(dialog.title).toBe('Selected text')
+	expect(fetchLinkTitle).not.toHaveBeenCalled()
+})
+
+it('does not read the clipboard for a selected URL', async () => {
+	const dialog = mountDialog({ selection: 'https://selected.example' })
+	await nextTick()
+	expect(dialog.url).toBe('https://selected.example')
+	expect(readClipboard).not.toHaveBeenCalled()
+})
+
+it('allows manual entry when clipboard access is denied', async () => {
+	readClipboard.mockRejectedValue(new Error('Permission denied'))
+	const dialog = mountDialog()
+	await nextTick()
+	expect(dialog.url).toBe('')
+	dialog.url = 'https://example.com'
+	expect(dialog.canInsert).toBe(true)
+})
+
+it('does not overwrite manual entry with a delayed clipboard response', async () => {
+	let resolve
+	readClipboard.mockImplementation(() => new Promise((done) => {
+		resolve = done
+	}))
+	const dialog = mountDialog()
+	dialog.url = 'https://manual.example'
+	resolve('https://clipboard.example')
+	await nextTick()
+	expect(dialog.url).toBe('https://manual.example')
+})
+
+it('ignores clipboard responses after the dialog is unmounted', async () => {
+	let resolve
+	readClipboard.mockImplementation(() => new Promise((done) => {
+		resolve = done
+	}))
+	const dialog = mountDialog()
+	app.unmount()
+	app = null
+	resolve('https://clipboard.example')
+	await vi.advanceTimersByTimeAsync(600)
+	expect(dialog.url).toBe('')
+	expect(fetchLinkTitle).not.toHaveBeenCalled()
+})
+
+it('closes immediately on Escape from a text field and removes the listener on unmount', () => {
+	const close = vi.fn()
+	mountDialog({ onClose: close })
+	const input = container.querySelector('input')
+	input.focus()
+	const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+	input.dispatchEvent(event)
+	expect(close).toHaveBeenCalledOnce()
+	expect(event.defaultPrevented).toBe(true)
+	app.unmount()
+	app = null
+	document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+	expect(close).toHaveBeenCalledOnce()
+})
 
 it('prefills a selected URL, fetches its title and inserts the link', async () => {
 	vi.mocked(fetchLinkTitle).mockResolvedValue('Fetched title')
@@ -68,6 +147,7 @@ it('prefills a selected URL, fetches its title and inserts the link', async () =
 it('opens the note tab directly without fetching a selected web URL', async () => {
 	const dialog = mountDialog({ initialTab: 'note', selection: 'https://example.com' })
 	expect(dialog.tab).toBe('note')
+	expect(readClipboard).not.toHaveBeenCalled()
 	await vi.advanceTimersByTimeAsync(600)
 	expect(fetchLinkTitle).not.toHaveBeenCalled()
 	expect(dialog.canInsert).toBe(false)
