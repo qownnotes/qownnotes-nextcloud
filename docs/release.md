@@ -37,7 +37,7 @@ Restrict both environments to the `release` branch and configure required review
 
 The **Sign and publish release** workflow (`.github/workflows/create_release.yml`) runs **only on pushes to the `release` branch**, not tags, pull requests or ordinary development pushes. There is no manual-dispatch trigger. Continuous builds remain separate and unsigned.
 
-1. Set the version in `appinfo/info.xml`, `package.json` and **both** root version fields in `package-lock.json`. Put nonempty release notes under `## <version>` as the newest section in `CHANGELOG.md`.
+1. Set the version in `appinfo/info.xml`, `package.json` and **both** root version fields in `package-lock.json`. Put nonempty release notes under `## <version>` as the newest section in `CHANGELOG.md`. Recompute `npmDepsHash` in `tests/vm/basic.nix` with `nix run github:NixOS/nixpkgs/nixos-26.05#prefetch-npm-deps -- package-lock.json` and run `just vm-test-version`. Every lockfile change, including a version-only bump, changes this hash; a stale hash prevents the VM tests from building.
 2. Run `python3 scripts/check-release.py` locally. It checks CalVer, matching package/lock versions, exactly one matching changelog section, the newest changelog version, manifest inputs and repository-backed screenshots. Dependency versions within lockfiles are not app versions; Composer files currently have no app-version field. `just release-check`, which runs on every push, and the continuous build (`scripts/package-app.sh`) use `--allow-unreleased`, so between releases the changelog can have a single leading `## Unreleased` section or sections for newer versions above the current one; the release itself always requires the newest section to match.
 3. Commit the changes and push that reviewed commit to `release`. Do not push another release while one is awaiting approval. The workflow prevents concurrent release jobs and does not cancel an active release.
 4. The explicit **Check all release versions and extract changelog** step runs before building or accessing secrets. A mismatch fails the release. Frontend lint/tests/build and the reusable formatting workflow (including PHP syntax/style/Psalm/unit checks for releases) must pass before signing. The standalone Nextcloud VM test workflow runs independently and is not part of the release workflow. No rebuild happens in the secret-bearing jobs.
@@ -68,7 +68,7 @@ Replace the example version as appropriate. Never replace published assets to fi
 
 ## Local signing fallback
 
-1. Set the version in `appinfo/info.xml`, `package.json` and both root version fields in `package-lock.json`, and add the release notes to `CHANGELOG.md` under `## <version>`.
+1. Set the version in `appinfo/info.xml`, `package.json` and both root version fields in `package-lock.json`, and add the release notes to `CHANGELOG.md` under `## <version>`. Recompute `npmDepsHash` in `tests/vm/basic.nix` as described in the automated release checklist, even for a version-only lockfile change.
 2. Run `just release-check` and make sure CI is green (format check and VM test). This runs without certificates, Docker or a frontend build. `just sign-app` additionally checks the built frontend before signing.
 3. Create the signed release archive. This builds the frontend and signs the app in the docker container of the dev environment (create it with `cd docker && just up` first):
 

@@ -14,7 +14,9 @@ Nextcloud app `qownnotes` (namespace `OCA\QOwnNotes`, PHP in `lib/`). See `docs/
 
 ## Version Number Location
 
-The version number is located in `appinfo/info.xml` within the `<version>` tag (CalVer, e.g. `26.10.0`). Keep `version` in `package.json` in sync; the release workflow checks it.
+The version number is located in `appinfo/info.xml` within the `<version>` tag (CalVer, e.g. `26.10.0`). Keep `version` in `package.json` and both root version fields in `package-lock.json` in sync; the release workflow checks them.
+
+When preparing a release, finalize the newest `CHANGELOG.md` section for that version and update `npmDepsHash` in `tests/vm/basic.nix`. Every change to `package-lock.json`, including a version-only bump, changes this hash. Recompute it with `nix run github:NixOS/nixpkgs/nixos-26.05#prefetch-npm-deps -- package-lock.json`, then run `python3 scripts/check-release.py` and `just vm-test-version`. See `docs/release.md` for the full release process.
 
 ## Release Files
 
