@@ -1,6 +1,6 @@
 # QOwnNotes for Nextcloud Changelog
 
-## Unreleased
+## 26.10.4
 
 - Hide the QOwnNotes navigation entry for users excluded by Nextcloud's app group restrictions
   ([#2](https://github.com/qownnotes/qownnotes-nextcloud/issues/2))
