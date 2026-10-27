@@ -34,6 +34,7 @@ Follow the style of the recent commits: `<type>: <summary>`.
 - Write a concise, imperative summary starting with a lowercase verb (for example, `add`, `fix`, `update`, or `remove`), without a trailing period.
 - Be specific about the change; preserve the casing of names such as QOwnNotes, GitHub, and API.
 - Recent commits use no scope and no body. A subject alone is sufficient; add a body only when useful to explain why the change is needed.
+- If the change relates to a GitHub issue, reference it in the commit body, e.g. `Fixes #2` for a fix that resolves the issue or `Refs #2` otherwise, and mention it in the `CHANGELOG.md` entry, e.g. `([#2](https://github.com/qownnotes/qownnotes-nextcloud/issues/2))`.
 
 Examples: `ci: remove VM tests from release workflow`, `feat: let users hide QOwnNotes from their app navigation`, `release: bump version to 26.10.1`.
 
