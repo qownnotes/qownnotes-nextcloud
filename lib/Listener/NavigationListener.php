@@ -12,6 +12,7 @@ namespace OCA\QOwnNotes\Listener;
 use OCA\QOwnNotes\AppInfo\Application;
 use OCA\QOwnNotes\Service\AppSettings;
 use OCA\QOwnNotes\Service\SettingsService;
+use OCP\App\IAppManager;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\INavigationManager;
@@ -21,7 +22,7 @@ use OCP\L10N\IFactory;
 use OCP\Navigation\Events\LoadAdditionalEntriesEvent;
 
 /**
- * Adds the navigation entry, unless the web interface is disabled (API-only mode) or the user hides it.
+ * Adds the navigation entry only for allowed users, unless the web interface is disabled or the user hides it.
  * The entry isn't declared in info.xml, so it can be conditional; the event is dispatched once the user is known.
  *
  * @template-implements IEventListener<LoadAdditionalEntriesEvent>
@@ -34,6 +35,7 @@ class NavigationListener implements IEventListener {
 		private IUserSession $userSession,
 		private AppSettings $appSettings,
 		private SettingsService $settingsService,
+		private IAppManager $appManager,
 	) {
 	}
 
@@ -43,7 +45,10 @@ class NavigationListener implements IEventListener {
 		}
 
 		$user = $this->userSession->getUser();
-		if ($user !== null && $this->settingsService->isHideNavigation($user->getUID())) {
+		if ($user === null || !$this->appManager->isEnabledForUser(Application::APP_ID, $user)) {
+			return;
+		}
+		if ($this->settingsService->isHideNavigation($user->getUID())) {
 			return;
 		}
 

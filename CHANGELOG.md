@@ -1,5 +1,10 @@
 # QOwnNotes for Nextcloud Changelog
 
+## Unreleased
+
+- Hide the QOwnNotes navigation entry for users excluded by Nextcloud's app group restrictions
+  ([#2](https://github.com/qownnotes/qownnotes-nextcloud/issues/2))
+
 ## 26.10.3
 
 - Ctrl+L (Cmd+L on macOS) opens a link dialog with web page title fetching and a searchable **Link to note** tab,
