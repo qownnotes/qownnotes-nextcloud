@@ -6,6 +6,8 @@
   like the QOwnNotes Web Companion bookmarks of QOwnNotes Desktop and the bookmarks of QOwnNotes Android
 - Bookmarks can be searched and filtered by their tags, opened, edited and deleted; changes are written to all
   bookmark notes that contain the bookmark, in the `- [Name](https://example.com) #tag description` format
+- The bookmarks dialog shows the most used tags with their counts, filters by a click on the tags of a bookmark,
+  previews the Markdown of edited bookmarks and keeps the list position when Escape returns from editing
 - Fix the notes failing to load with "Request failed with status code 423" when the note folder doesn't exist yet,
   because the parallel requests of the web interface all tried to create it
 

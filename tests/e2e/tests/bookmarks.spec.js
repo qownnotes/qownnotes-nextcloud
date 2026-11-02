@@ -44,10 +44,25 @@ test('the bookmarks dialog lists, edits and deletes bookmarks of bookmark notes'
 		await expect(items.first()).toContainText('#other')
 		await expect(items.first().getByRole('link', { name: `Alpha ${id}` })).toHaveAttribute('href', alpha)
 
-		await dialog.getByRole('button', { name: 'other', exact: false }).filter({ hasText: '#other' }).click()
+		// The tags of a bookmark select the tag filter
+		await items.first().getByRole('button', { name: '#other', exact: true }).click()
 		await expect(items).toHaveCount(1)
-		await dialog.getByRole('button', { name: 'other', exact: false }).filter({ hasText: '#other' }).click()
+		await expect(dialog.getByText('1 of ', { exact: false })).toBeVisible()
+		await dialog.getByRole('group', { name: 'Filter by tag' }).getByRole('button').filter({ hasText: '#other' }).click()
 		await expect(items).toHaveCount(2)
+		await items.first().getByRole('button', { name: '#other', exact: true }).click()
+		await expect(items).toHaveCount(1)
+		await dialog.getByRole('button', { name: 'Clear filters', exact: true }).click()
+		await expect(dialog.getByRole('textbox', { name: 'Search bookmarks', exact: true })).toHaveValue('')
+		await dialog.getByRole('textbox', { name: 'Search bookmarks', exact: true }).fill(id)
+		await expect(items).toHaveCount(2)
+
+		// Escape returns to the list
+		await dialog.getByRole('button', { name: `Edit Alpha ${id}`, exact: true }).click()
+		await expect(dialog.getByRole('heading', { name: 'Edit bookmark' })).toBeVisible()
+		await page.keyboard.press('Escape')
+		await expect(dialog.getByRole('heading', { name: 'Bookmarks' })).toBeVisible()
+		await expect(dialog.getByRole('button', { name: `Edit Alpha ${id}`, exact: true })).toBeFocused()
 
 		await dialog.getByRole('button', { name: `Edit Alpha ${id}`, exact: true }).click()
 		await expect(dialog.getByRole('heading', { name: 'Edit bookmark' })).toBeVisible()
