@@ -16,6 +16,8 @@ use OCP\Files\IRootFolder;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
+use OCP\Lock\ILockingProvider;
+use OCP\Lock\LockedException;
 
 /**
  * Resolves the user's note folder and applies the QOwnNotes rules for note files and subfolders
@@ -29,12 +31,16 @@ class NoteFolderService {
 
 	public const TAG_DATABASE_FILE_NAME = 'notes.sqlite';
 
+	/** Attempts to get the folder creation lock, 100 ms apart */
+	private const CREATE_LOCK_TRIES = 50;
+
 	/** @var array<string, list<string>> compiled ignore patterns per user */
 	private array $ignorePatterns = [];
 
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private SettingsService $settings,
+		private ILockingProvider $lockingProvider,
 	) {
 	}
 
@@ -171,7 +177,36 @@ class NoteFolderService {
 		return $node;
 	}
 
+	/**
+	 * Parallel requests of a fresh account all create the note folder. Nextcloud keeps shared file locks until the
+	 * end of a request, so concurrent mkdir calls of the same path block each other and all fail as locked;
+	 * an app lock lets only one request create folders, the others find them afterwards.
+	 */
 	private function createFolderPath(Folder $parent, string $path): Folder {
+		$lockKey = 'qownnotes/create-folder/' . $parent->getId();
+		$this->acquireLock($lockKey);
+		try {
+			return $this->createFolderPathUnlocked($parent, $path);
+		} finally {
+			$this->lockingProvider->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		}
+	}
+
+	private function acquireLock(string $lockKey): void {
+		for ($try = 1; ; $try++) {
+			try {
+				$this->lockingProvider->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE, 'note folder');
+				return;
+			} catch (LockedException $e) {
+				if ($try >= self::CREATE_LOCK_TRIES) {
+					throw $e;
+				}
+				usleep(100000);
+			}
+		}
+	}
+
+	private function createFolderPathUnlocked(Folder $parent, string $path): Folder {
 		$folder = $parent;
 		foreach (explode('/', $path) as $segment) {
 			if (!$folder->nodeExists($segment)) {

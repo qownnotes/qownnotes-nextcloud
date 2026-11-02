@@ -11,7 +11,10 @@ namespace OCA\QOwnNotes\Tests\unit\Service;
 
 use OCA\QOwnNotes\Service\NoteFolderService;
 use OCA\QOwnNotes\Service\SettingsService;
+use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
+use OCP\Lock\ILockingProvider;
+use OCP\Lock\LockedException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +24,32 @@ class NoteFolderServiceTest extends TestCase {
 		$settings->method('getIgnoreNoteSubFolders')->willReturn($ignorePatterns);
 		$settings->method('getFileSuffix')->willReturn($suffix);
 
-		return new NoteFolderService($this->createMock(IRootFolder::class), $settings);
+		return new NoteFolderService($this->createMock(IRootFolder::class), $settings, $this->createMock(ILockingProvider::class));
+	}
+
+	public function testCreatesNotesFolderWithLockAndReusesFolderCreatedMeanwhile(): void {
+		$settings = $this->createMock(SettingsService::class);
+		$settings->method('getNotesPath')->willReturn('Notes');
+
+		$notesFolder = $this->createMock(Folder::class);
+		$userFolder = $this->createMock(Folder::class);
+		$userFolder->method('getId')->willReturn(7);
+		// Another request created the folder while this one waited for the lock
+		$userFolder->method('nodeExists')->with('Notes')->willReturnOnConsecutiveCalls(false, true, true);
+		$userFolder->method('get')->with('Notes')->willReturn($notesFolder);
+		$userFolder->expects($this->never())->method('newFolder');
+
+		$rootFolder = $this->createMock(IRootFolder::class);
+		$rootFolder->method('getUserFolder')->willReturn($userFolder);
+
+		$lockingProvider = $this->createMock(ILockingProvider::class);
+		$lockingProvider->expects($this->exactly(2))->method('acquireLock')
+			->with('qownnotes/create-folder/7', ILockingProvider::LOCK_EXCLUSIVE)
+			->willReturnOnConsecutiveCalls($this->throwException(new LockedException('qownnotes/create-folder/7')), null);
+		$lockingProvider->expects($this->once())->method('releaseLock')->with('qownnotes/create-folder/7', ILockingProvider::LOCK_EXCLUSIVE);
+
+		$service = new NoteFolderService($rootFolder, $settings, $lockingProvider);
+		$this->assertSame($notesFolder, $service->getNotesFolder('alice'));
 	}
 
 	public static function folderNames(): array {
