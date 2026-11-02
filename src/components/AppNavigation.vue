@@ -104,6 +104,11 @@
 
 		<template #footer>
 			<ul class="app-navigation-entry__settings">
+				<NcAppNavigationItem :name="t('qownnotes', 'Bookmarks')" @click="$emit('openBookmarks')">
+					<template #icon>
+						<BookmarkMultipleOutline :size="20" />
+					</template>
+				</NcAppNavigationItem>
 				<NcAppNavigationItem :name="t('qownnotes', 'Deleted notes')" @click="$emit('openTrash')">
 					<template #icon>
 						<Delete :size="20" />
@@ -150,6 +155,7 @@ import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcAppNavigationNew from '@nextcloud/vue/components/NcAppNavigationNew'
 import NcCounterBubble from '@nextcloud/vue/components/NcCounterBubble'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
+import BookmarkMultipleOutline from 'vue-material-design-icons/BookmarkMultipleOutline.vue'
 import Close from 'vue-material-design-icons/Close.vue'
 import Cog from 'vue-material-design-icons/Cog.vue'
 import Delete from 'vue-material-design-icons/Delete.vue'
@@ -172,6 +178,7 @@ export default {
 	name: 'AppNavigation',
 
 	components: {
+		BookmarkMultipleOutline,
 		Close,
 		Cog,
 		Delete,
@@ -204,7 +211,7 @@ export default {
 		},
 	},
 
-	emits: ['selectFolder', 'showFavorites', 'newNote', 'openSettings', 'openTrash'],
+	emits: ['selectFolder', 'showFavorites', 'newNote', 'openSettings', 'openTrash', 'openBookmarks'],
 
 	data() {
 		return {

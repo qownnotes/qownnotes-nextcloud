@@ -12,7 +12,8 @@
 			@showFavorites="showFavorites"
 			@newNote="createNote"
 			@openSettings="settingsOpen = true"
-			@openTrash="trashOpen = true" />
+			@openTrash="trashOpen = true"
+			@openBookmarks="openBookmarks" />
 
 		<NcAppContent
 			:pageHeading="t('qownnotes', 'Notes')"
@@ -73,6 +74,7 @@
 
 		<SettingsDialog v-model:open="settingsOpen" @changed="reloadAll" />
 		<TrashDialog v-if="trashOpen" @restored="onNoteRestored" @close="trashOpen = false" />
+		<BookmarksDialog v-if="bookmarksOpen" @openNote="openBookmarkNote" @close="bookmarksOpen = false" />
 	</NcContent>
 </template>
 
@@ -86,6 +88,7 @@ import NcContent from '@nextcloud/vue/components/NcContent'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
 import AppNavigation from './components/AppNavigation.vue'
+import BookmarksDialog from './components/BookmarksDialog.vue'
 import NoteEditor from './components/NoteEditor.vue'
 import NoteList from './components/NoteList.vue'
 import NoteSidebar from './components/NoteSidebar.vue'
@@ -109,6 +112,7 @@ export default {
 
 	components: {
 		AppNavigation,
+		BookmarksDialog,
 		NcAppContent,
 		NcButton,
 		NcContent,
@@ -127,6 +131,7 @@ export default {
 			favoritesOnly: false,
 			settingsOpen: false,
 			trashOpen: false,
+			bookmarksOpen: false,
 			detailsOpen: false,
 			loadError: '',
 			refreshTimer: null,
@@ -280,6 +285,18 @@ export default {
 				this.favoritesOnly = false
 				this.$router.push(noteRoute(noteId, null))
 			}
+		},
+
+		async openBookmarks() {
+			// The bookmarks are read from the saved notes
+			await this.$refs.editor?.save()
+			this.bookmarksOpen = true
+		},
+
+		openBookmarkNote(noteId) {
+			this.bookmarksOpen = false
+			this.favoritesOnly = false
+			this.$router.push(noteRoute(noteId, null))
 		},
 
 		restoreVersion(content) {

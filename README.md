@@ -17,6 +17,7 @@ It also provides the server APIs for the [QOwnNotes desktop app](https://www.qow
 - Notes stay plain Markdown files in your Nextcloud, organized in note subfolders like in QOwnNotes Desktop
 - Tags with hierarchy and colors, read from and written to the note folder's `notes.sqlite`, so they are the same in QOwnNotes Desktop, Android and on the web ([details](docs/notes-sqlite.md))
 - Web interface with note list, subfolder tree, tag tree and filters, Markdown editor with preview, conflict handling, versions and deleted notes
+- Bookmarks dialog to search, filter, edit and delete the bookmarks of your bookmark notes, like in QOwnNotes Desktop and Android ([details](#bookmarks))
 - Dashboard widget, unified search (also by tags), link previews and "Open in QOwnNotes" in the Files app
 - [Notes API 1.4](docs/api/notes-api.md) for QOwnNotes Android and the [QOwnNotes API](docs/api/qownnotes-api.md) for QOwnNotes Desktop and Android
 - API-only mode: administrators can disable the web interface and only provide the APIs
@@ -73,6 +74,25 @@ The Markdown preview appears on the right and updates as you type, without waiti
 Use the **Preview** button to hide or show it. On narrow screens, the preview appears below the editor.
 The editor and the preview scroll together like in QOwnNotes Desktop, and switching between them keeps the position.
 This preference is remembered in the current browser only.
+
+## Bookmarks
+
+Click **Bookmarks** at the bottom of the app navigation to see all bookmarks, like the bookmarks that the
+[QOwnNotes Web Companion](https://github.com/qownnotes/web-companion) browser extension gets from QOwnNotes Desktop
+and the bookmarks of QOwnNotes Android. Bookmarks are list items with a link in notes with the tag `bookmarks` or
+with the name `Bookmarks` (in any subfolder):
+
+```markdown
+- [QOwnNotes](https://www.qownnotes.org) #notes #app The open source notepad
+```
+
+Text after the link becomes the description, and words starting with `#` become the bookmark's tags.
+Bookmarks with the same URL are shown once, with the tags and descriptions of all their list items.
+
+Search the bookmarks by name, URL, description or tag, filter them by clicking their tags, open them in a new browser
+tab, or open the notes that contain them. **Edit** and **Delete** change every list item of the bookmark in all
+bookmark notes; edited bookmarks are written in the format above, keeping the list character and indentation.
+Notes that were changed by another client in the meantime are reloaded first, so their changes are kept.
 
 ## API-only mode
 
