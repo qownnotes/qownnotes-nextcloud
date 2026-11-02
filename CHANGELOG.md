@@ -1,6 +1,6 @@
 # QOwnNotes for Nextcloud Changelog
 
-## Unreleased
+## 26.11.0
 
 - A **Bookmarks** dialog in the app navigation lists the bookmarks of notes tagged `bookmarks` or named `Bookmarks`,
   like the QOwnNotes Web Companion bookmarks of QOwnNotes Desktop and the bookmarks of QOwnNotes Android
