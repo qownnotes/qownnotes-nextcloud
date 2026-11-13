@@ -13,6 +13,7 @@ services:
     volumes:
       - nextcloud:/var/www/html
       - ..:/var/www/html/custom_apps/qownnotes
+      - ./zz-development.config.php:/var/www/html/config/zz-development.config.php:ro
       - ./hooks/before-starting.sh:/docker-entrypoint-hooks.d/before-starting/qownnotes.sh:ro
 
 volumes:
