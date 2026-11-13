@@ -169,6 +169,7 @@ All APIs live under `/index.php/apps/qownnotes/`.
 | Notes API     | `GET/POST /api/v1/notes`                                               | Same semantics as Nextcloud Notes API v1                                              |
 |               | `GET/PUT/DELETE /api/v1/notes/{id}`                                    | `If-Match` → 412 on conflict                                                          |
 |               | `GET/PUT /api/v1/settings`                                             | `notesPath`, `fileSuffix` (custom suffix as of 1.3)                                   |
+|               | `GET /api/v1/settings/note-folder-candidates`                          | QOwnNotes extension: other folders with notes, offered to the user                    |
 |               | `GET/POST/DELETE /api/v1/attachment/{noteid}`                          | Also routed as `/api/v1.4/attachment/{noteid}` for parity with Notes                  |
 |               | `OPTIONS /api/v1/{path}`                                               | CORS preflight                                                                        |
 | QOwnNotes API | `GET /api/v1/note/app_info`                                            | Byte-compatible with qownnotesapi                                                     |
@@ -341,7 +342,7 @@ With these endpoints Android can later stop downloading and uploading the whole 
 - Tags: `<notesPath>/notes.sqlite` only (4.9).
 - Table `qownnotes_meta` (`id`, `user_id`, `file_id`, `last_update`, `etag`, `content_etag`, `file_etag`) caches per-note ETags and modification state for `pruneBefore`, list ETags and cheap listing. It is a cache that can always be rebuilt from files. It is validated lazily against the file ETags on every request, so changes from any client are detected without file event listeners. Rows of deleted notes are removed while listing, and rows of deleted users by a `UserDeletedEvent` listener.
 - Parsed `notes.sqlite` cache: `ICache` (distributed cache if configured), keyed by user and file ETag.
-- User settings (`notesPath`, `fileSuffix`, `ignoreNoteSubFolders`, `subfoldersEnabled`, editor prefs) in `IConfig` user values under the `qownnotes` app ID. On first use, `notesPath` defaults to the user's Nextcloud Notes setting if present (`notes/notesPath`), otherwise `Notes`, so switching Android from Notes to QOwnNotes is seamless.
+- User settings (`notesPath`, `fileSuffix`, `ignoreNoteSubFolders`, `subfoldersEnabled`, editor prefs) in `IConfig` user values under the `qownnotes` app ID. On first use, `notesPath` defaults to the user's Nextcloud Notes setting if present (`notesPath` in the JSON user value `notes/settings`, or the legacy `notes/notesPath`), otherwise `Notes`, so switching Android from Notes to QOwnNotes is seamless.
 
 ### 4.12 Web UI
 

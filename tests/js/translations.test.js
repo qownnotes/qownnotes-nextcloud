@@ -31,12 +31,12 @@ describe.each(Object.entries(languages))('%s translations', (language, indices) 
 		const script = readFileSync(new URL(`../../l10n/${language}.js`, import.meta.url), 'utf8')
 		runInNewContext(script, { OC: { L10N: { register } } })
 		expect(register).toHaveBeenCalledExactlyOnceWith('qownnotes', catalog.translations, catalog.pluralForm)
-		expect(Object.keys(catalog.translations)).toHaveLength(207)
+		expect(Object.keys(catalog.translations)).toHaveLength(224)
 	})
 
 	it('selects the correct plural forms, including zero and large counts', () => {
 		const pluralEntries = Object.entries(catalog.translations).filter(([key]) => key.includes('_::_'))
-		expect(pluralEntries).toHaveLength(4)
+		expect(pluralEntries).toHaveLength(6)
 		for (const [i, n] of counts.entries()) {
 			const index = runInNewContext(`let nplurals, plural; ${catalog.pluralForm}; Number(plural)`, { n })
 			expect(index, `plural index for ${n}`).toBe(indices[i])

@@ -19,6 +19,7 @@ use OCA\QOwnNotes\Model\Note;
 use OCA\QOwnNotes\Model\NoteLocation;
 use OCA\QOwnNotes\Service\AttachmentService;
 use OCA\QOwnNotes\Service\MetaService;
+use OCA\QOwnNotes\Service\NoteFolderCandidateService;
 use OCA\QOwnNotes\Service\NoteFolderService;
 use OCA\QOwnNotes\Service\NoteService;
 use OCA\QOwnNotes\Service\NoteTitle;
@@ -53,6 +54,7 @@ class NotesApiController extends ApiController {
 		private MetaService $metaService,
 		private SettingsService $settingsService,
 		private NoteFolderService $folderService,
+		private NoteFolderCandidateService $candidateService,
 		private AttachmentService $attachmentService,
 		private TagService $tagService,
 		private IMimeTypeDetector $mimeTypeDetector,
@@ -236,6 +238,17 @@ class NotesApiController extends ApiController {
 
 			return $this->settingsService->getAll($userId);
 		});
+	}
+
+	/**
+	 * QOwnNotes extension: other folders that already contain notes, so users can find a note folder that another
+	 * app created, e.g. a localized folder of the Nextcloud Notes app
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	#[CORS]
+	public function getNoteFolderCandidates(): Response {
+		return $this->responder->respond(fn (): array => $this->candidateService->getCandidates($this->responder->getUserId()));
 	}
 
 	#[NoAdminRequired]

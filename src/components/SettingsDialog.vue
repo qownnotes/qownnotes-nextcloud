@@ -15,7 +15,29 @@
 				<NcTextField
 					v-model="form.notesPath"
 					:label="t('qownnotes', 'Path of the note folder')"
-					:helperText="t('qownnotes', 'Relative to your files, used by QOwnNotes Android and the web interface')" />
+					:helperText="t('qownnotes', 'Relative to your files. QOwnNotes Android and other Notes API clients use the same folder. Changing it does not move any notes.')" />
+				<NcNoteCard v-if="notesPathChanged" type="warning" class="settings-dialog__card">
+					{{ t('qownnotes', 'Saving switches the note folder to \u201C{path}\u201D for the web interface, QOwnNotes Android and other Notes API clients. No notes are moved.', { path: normalizedNotesPath || DEFAULT_NOTES_PATH }) }}
+				</NcNoteCard>
+				<NcNoteCard
+					v-if="visibleCandidates.length > 0"
+					type="info"
+					class="settings-dialog__card"
+					:heading="t('qownnotes', 'Other folders with notes were found')">
+					<p>{{ t('qownnotes', 'If your notes are in one of these folders, for example because another app created it, you can use it as note folder.') }}</p>
+					<ul class="settings-dialog__candidates" :aria-label="t('qownnotes', 'Other folders with notes')">
+						<li v-for="candidate in visibleCandidates" :key="candidate.path" class="settings-dialog__candidate">
+							<FolderOutline :size="20" class="settings-dialog__candidate-icon" />
+							<div class="settings-dialog__candidate-text">
+								<span class="settings-dialog__candidate-path">{{ candidate.path }}</span>
+								<span class="settings-dialog__candidate-description">{{ candidateDescription(candidate) }}</span>
+							</div>
+							<NcButton variant="secondary" @click="form.notesPath = candidate.path">
+								{{ t('qownnotes', 'Use this folder') }}
+							</NcButton>
+						</li>
+					</ul>
+				</NcNoteCard>
 				<NcTextField
 					v-model="form.fileSuffix"
 					:label="t('qownnotes', 'File extension of new notes')"
@@ -111,20 +133,29 @@ import NcAppSettingsSection from '@nextcloud/vue/components/NcAppSettingsSection
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
+import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
-import { errorMessage } from '../api.js'
+import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
+import { errorMessage, fetchNoteFolderCandidates } from '../api.js'
+import logger from '../logger.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
+import { candidateDescription, normalizeFolderPath } from '../utils/noteFolders.js'
+
+// Like SettingsService::DEFAULT_NOTES_PATH, used by the server for an empty path
+const DEFAULT_NOTES_PATH = 'Notes'
 
 export default {
 	name: 'SettingsDialog',
 
 	components: {
+		FolderOutline,
 		NcAppSettingsDialog,
 		NcAppSettingsSection,
 		NcButton,
 		NcCheckboxRadioSwitch,
 		NcLoadingIcon,
+		NcNoteCard,
 		NcTextField,
 	},
 
@@ -139,9 +170,11 @@ export default {
 
 	data() {
 		return {
+			DEFAULT_NOTES_PATH,
 			form: {},
 			sideBySidePreview: false,
 			saving: false,
+			candidates: [],
 		}
 	},
 
@@ -150,6 +183,20 @@ export default {
 
 		appUrl() {
 			return window.location.origin + generateUrl('/apps/qownnotes/')
+		},
+
+		normalizedNotesPath() {
+			return normalizeFolderPath(this.form.notesPath)
+		},
+
+		notesPathChanged() {
+			const saved = this.settingsStore.server.notesPath
+			return saved !== '' && (this.normalizedNotesPath || DEFAULT_NOTES_PATH) !== saved
+		},
+
+		/** The candidates without the folder that is currently entered */
+		visibleCandidates() {
+			return this.candidates.filter((candidate) => candidate.path !== this.normalizedNotesPath)
 		},
 	},
 
@@ -160,6 +207,7 @@ export default {
 				if (open) {
 					this.form = { ...this.settingsStore.server }
 					this.sideBySidePreview = this.settingsStore.local.sideBySidePreview
+					this.loadCandidates()
 				}
 			},
 		},
@@ -167,6 +215,19 @@ export default {
 
 	methods: {
 		t,
+		candidateDescription,
+
+		/**
+		 * Loads the other folders with notes in the background, the dialog is usable meanwhile
+		 */
+		async loadCandidates() {
+			try {
+				this.candidates = await fetchNoteFolderCandidates()
+			} catch (error) {
+				this.candidates = []
+				logger.warn('Loading the other folders with notes failed', { error })
+			}
+		},
 
 		onOpenChanged(open) {
 			this.$emit('update:open', open)
@@ -215,6 +276,53 @@ export default {
 	margin-bottom: 8px;
 	padding-inline: var(--app-settings-section-text-offset);
 	font-weight: bold;
+}
+
+.settings-dialog__card {
+	margin: 0;
+}
+
+.settings-dialog__card p {
+	margin: 0 0 8px;
+}
+
+.settings-dialog__candidates {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.settings-dialog__candidate {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0;
+}
+
+.settings-dialog__candidate + .settings-dialog__candidate {
+	border-top: 1px solid var(--color-border);
+}
+
+.settings-dialog__candidate-icon {
+	flex-shrink: 0;
+	color: var(--color-text-maxcontrast);
+}
+
+.settings-dialog__candidate-text {
+	display: flex;
+	flex: 1 1 12em;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.settings-dialog__candidate-path {
+	font-weight: bold;
+	overflow-wrap: anywhere;
+}
+
+.settings-dialog__candidate-description {
+	color: var(--color-text-maxcontrast);
 }
 
 .settings-hint {

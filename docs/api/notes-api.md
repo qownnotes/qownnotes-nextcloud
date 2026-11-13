@@ -6,18 +6,19 @@ See the [API overview](README.md) for the base URL, authentication, capabilities
 
 ## Endpoints
 
-| Method   | Path                        | Description                                                                   |
-| -------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `GET`    | `notes`                     | List notes (`category`, `exclude`, `pruneBefore`, `chunkSize`, `chunkCursor`) |
-| `POST`   | `notes`                     | Create a note (`category`, `title`, `content`, `modified`, `favorite`)        |
-| `GET`    | `notes/{id}`                | Get a note (`exclude`)                                                        |
-| `PUT`    | `notes/{id}`                | Update a note (`content`, `title`, `category`, `modified`, `favorite`)        |
-| `DELETE` | `notes/{id}`                | Delete a note                                                                 |
-| `GET`    | `settings`                  | Get the user's settings                                                       |
-| `PUT`    | `settings`                  | Change the user's settings                                                    |
-| `GET`    | `attachment/{noteId}?path=` | Download a file linked by a note                                              |
-| `POST`   | `attachment/{noteId}`       | Upload a file (multipart field `file`)                                        |
-| `DELETE` | `attachment/{noteId}?path=` | Delete a media file or attachment                                             |
+| Method   | Path                              | Description                                                                   |
+| -------- | --------------------------------- | ----------------------------------------------------------------------------- |
+| `GET`    | `notes`                           | List notes (`category`, `exclude`, `pruneBefore`, `chunkSize`, `chunkCursor`) |
+| `POST`   | `notes`                           | Create a note (`category`, `title`, `content`, `modified`, `favorite`)        |
+| `GET`    | `notes/{id}`                      | Get a note (`exclude`)                                                        |
+| `PUT`    | `notes/{id}`                      | Update a note (`content`, `title`, `category`, `modified`, `favorite`)        |
+| `DELETE` | `notes/{id}`                      | Delete a note                                                                 |
+| `GET`    | `settings`                        | Get the user's settings                                                       |
+| `PUT`    | `settings`                        | Change the user's settings                                                    |
+| `GET`    | `settings/note-folder-candidates` | Other folders with notes (QOwnNotes extension)                                |
+| `GET`    | `attachment/{noteId}?path=`       | Download a file linked by a note                                              |
+| `POST`   | `attachment/{noteId}`             | Upload a file (multipart field `file`)                                        |
+| `DELETE` | `attachment/{noteId}?path=`       | Delete a media file or attachment                                             |
 
 The attachment endpoints are also available as `/api/v1.4/attachment/{noteId}`.
 
@@ -102,7 +103,43 @@ The web interface always sends this header.
 | `rewriteMediaLinks`    | `true`  | Whether relative media links are adapted when a note is moved to another subfolder depth             |
 | `hideNavigation`       | `false` | Whether the app is hidden from the user's app navigation; the web interface stays available          |
 
-If the user never set `notesPath`, the app takes the note folder of the Nextcloud Notes app, so both apps show the same notes.
+If the user never set `notesPath`, the app takes the note folder of the Nextcloud Notes app, so both apps show the same notes. The Notes app stores it as `notesPath` in its JSON user setting `settings` (older versions used a separate `notesPath` user setting); it is often a localized name like `Notizen`. The folder is taken over once and stored, later changes in the Notes app don't change it.
+
+The note folder is shared by all clients of the Notes API and the web interface. Changing `notesPath` only switches the folder, notes are never moved.
+
+### Note folder candidates
+
+QOwnNotes extension, not part of the Nextcloud Notes API: `GET settings/note-folder-candidates` lists other folders in the user's files that already contain notes, so clients can offer them when the note folder is empty or another app created a separate folder. The server never switches the folder by itself; clients set `notesPath` with `PUT settings` after the user chose a folder.
+
+```json
+[
+  {
+    "path": "Notizen",
+    "noteCount": 12,
+    "noteCountCapped": false,
+    "hasTagDatabase": true,
+    "sources": ["notesApp", "defaultName", "tagDatabase"]
+  }
+]
+```
+
+A folder is a candidate if it is
+
+- the note folder of the Nextcloud Notes app (`notesApp`),
+- a folder at the root of the user's files whose name is the default name of the Notes folder in one of the Nextcloud languages, like `Notes`, `Notizen` or `Notas`, ignoring case (`defaultName`),
+- or a folder with a QOwnNotes note folder database `notes.sqlite` (`tagDatabase`, found with the Nextcloud file search),
+
+and contains `notes.sqlite` or at least one note: a file ending in `.md`, `.txt`, `.markdown`, `.note`, `.org` or the user's `fileSuffix`, directly or in a subfolder. Subfolders that match `ignoreNoteSubFolders` or are named `media`, `attachments` or `trash` are skipped, like folders whose path contains such a name.
+
+| Field             | Description                                                                 |
+| ----------------- | --------------------------------------------------------------------------- |
+| `path`            | The folder, relative to the user's files root, in the format of `notesPath` |
+| `noteCount`       | Number of notes in the folder and its subfolders, counted up to 1000        |
+| `noteCountCapped` | Whether counting stopped early, so `noteCount` is only a lower bound        |
+| `hasTagDatabase`  | Whether the folder contains `notes.sqlite`                                  |
+| `sources`         | Why the folder was found: `notesApp`, `defaultName` and/or `tagDatabase`    |
+
+The current note folder, its subfolders and the folders that contain it are never listed. The folder of the Notes app and folders with `notes.sqlite` come first, then folders with more notes. At most 10 folders are returned; the list is empty if there are none.
 
 ### Attachments
 

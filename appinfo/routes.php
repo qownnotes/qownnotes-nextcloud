@@ -26,6 +26,8 @@ return ['routes' => [
 	['name' => 'notes_api#destroy', 'url' => '/api/v1/notes/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 	['name' => 'notes_api#get_settings', 'url' => '/api/v1/settings', 'verb' => 'GET'],
 	['name' => 'notes_api#set_settings', 'url' => '/api/v1/settings', 'verb' => 'PUT'],
+	// QOwnNotes extension: other folders with notes
+	['name' => 'notes_api#get_note_folder_candidates', 'url' => '/api/v1/settings/note-folder-candidates', 'verb' => 'GET'],
 	// Attachments were added in Notes API v1.4, whose clients use a "v1.4" path
 	['name' => 'notes_api#get_attachment', 'url' => '/api/{apiVersion}/attachment/{noteid}', 'verb' => 'GET', 'requirements' => ['apiVersion' => 'v1(\.4)?', 'noteid' => '\d+']],
 	['name' => 'notes_api#upload_file', 'url' => '/api/{apiVersion}/attachment/{noteid}', 'verb' => 'POST', 'requirements' => ['apiVersion' => 'v1(\.4)?', 'noteid' => '\d+']],

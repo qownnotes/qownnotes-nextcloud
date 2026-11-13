@@ -51,6 +51,32 @@
 
 		<NcLoadingIcon v-if="loading" :size="32" class="note-list__loading" />
 		<NcEmptyContent
+			v-else-if="notes.length === 0 && folderSuggestion"
+			class="note-list__suggestion"
+			:name="t('qownnotes', 'Your note folder \u201C{folder}\u201D has no notes yet', { folder: notesPath })">
+			<template #icon>
+				<FolderSearchOutline />
+			</template>
+			<template #description>
+				<span class="note-list__suggestion-text">
+					{{ t('qownnotes', 'Notes were found in \u201C{path}\u201D.', { path: folderSuggestion.path }) }}
+				</span>
+				<span v-if="suggestionDetails" class="note-list__suggestion-details">
+					{{ suggestionDetails }}
+				</span>
+			</template>
+			<template #action>
+				<div class="note-list__suggestion-actions">
+					<NcButton variant="primary" wide @click="$emit('useFolder', folderSuggestion.path)">
+						{{ t('qownnotes', 'Use \u201C{path}\u201D', { path: folderSuggestion.path }) }}
+					</NcButton>
+					<NcButton variant="secondary" wide @click="$emit('openSettings')">
+						{{ t('qownnotes', 'Open settings') }}
+					</NcButton>
+				</div>
+			</template>
+		</NcEmptyContent>
+		<NcEmptyContent
 			v-else-if="notes.length === 0"
 			:name="t('qownnotes', 'No notes found')"
 			:description="search ? t('qownnotes', 'Try another search term or check your filters') : t('qownnotes', 'Create a note or choose another folder or tag')">
@@ -113,6 +139,7 @@ import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NcListItem from '@nextcloud/vue/components/NcListItem'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import FolderSearchOutline from 'vue-material-design-icons/FolderSearchOutline.vue'
 import Magnify from 'vue-material-design-icons/Magnify.vue'
 import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
@@ -123,6 +150,7 @@ import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
 import { DRAG_TYPE_NOTE, encodeNoteIds } from '../utils/dragAndDrop.js'
 import { noteListEntry } from '../utils/noteEmoji.js'
+import { candidateDescription } from '../utils/noteFolders.js'
 import { tagColor } from '../utils/tags.js'
 
 // Rendering thousands of list items at once is slow, so the list grows on request
@@ -133,6 +161,7 @@ export default {
 
 	components: {
 		BulkActions,
+		FolderSearchOutline,
 		Magnify,
 		NcActionButton,
 		NcActionCheckbox,
@@ -174,9 +203,21 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+
+		/** The note folder, for the hint about other folders with notes */
+		notesPath: {
+			type: String,
+			default: '',
+		},
+
+		/** Another folder with notes that is offered if the note folder is empty, see `GET settings/note-folder-candidates` */
+		folderSuggestion: {
+			type: Object,
+			default: null,
+		},
 	},
 
-	emits: ['select', 'newNote', 'update:search', 'notesDeleted'],
+	emits: ['select', 'newNote', 'update:search', 'notesDeleted', 'useFolder', 'openSettings'],
 
 	data() {
 		return {
@@ -190,6 +231,10 @@ export default {
 
 		visibleNotes() {
 			return this.notes.slice(0, this.limit)
+		},
+
+		suggestionDetails() {
+			return this.folderSuggestion ? candidateDescription(this.folderSuggestion) : ''
 		},
 
 		listEntries() {
@@ -267,6 +312,29 @@ export default {
 
 .note-list__loading {
 	margin-top: 32px;
+}
+
+.note-list__suggestion {
+	padding-inline: 16px;
+}
+
+.note-list__suggestion-text,
+.note-list__suggestion-details {
+	display: block;
+	overflow-wrap: anywhere;
+}
+
+.note-list__suggestion-details {
+	margin-top: 4px;
+	color: var(--color-text-maxcontrast);
+}
+
+.note-list__suggestion-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	max-width: 280px;
 }
 
 /* NcListItem doesn't receive this component's scope ID, so the selector starts with :deep() */

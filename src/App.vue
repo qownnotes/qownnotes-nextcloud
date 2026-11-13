@@ -27,9 +27,13 @@
 					:selectedNoteId="selectedNoteId"
 					:loading="!notesStore.loaded"
 					:heading="listHeading"
+					:notesPath="settingsStore.server.notesPath"
+					:folderSuggestion="folderSuggestion"
 					@select="selectNote"
 					@newNote="createNote"
-					@notesDeleted="onNotesDeleted" />
+					@notesDeleted="onNotesDeleted"
+					@useFolder="folderToUse = $event"
+					@openSettings="settingsOpen = true" />
 			</template>
 
 			<NoteEditor
@@ -73,18 +77,25 @@
 			@close="detailsOpen = false" />
 
 		<SettingsDialog v-model:open="settingsOpen" @changed="reloadAll" />
+		<NcDialog
+			v-if="folderToUse !== null"
+			:name="t('qownnotes', 'Use \u201C{path}\u201D as note folder?', { path: folderToUse })"
+			:message="t('qownnotes', 'The note folder changes from \u201C{current}\u201D to \u201C{path}\u201D for the web interface, QOwnNotes Android and other Notes API clients. No files are moved or deleted, and you can switch back in the settings at any time.', { current: settingsStore.server.notesPath, path: folderToUse })"
+			:buttons="useFolderButtons"
+			@update:open="folderToUse = null" />
 		<TrashDialog v-if="trashOpen" @restored="onNoteRestored" @close="trashOpen = false" />
 		<BookmarksDialog v-if="bookmarksOpen" @openNote="openBookmarkNote" @close="bookmarksOpen = false" />
 	</NcContent>
 </template>
 
 <script>
-import { showError } from '@nextcloud/dialogs'
+import { showError, showSuccess } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
 import { mapStores } from 'pinia'
 import NcAppContent from '@nextcloud/vue/components/NcAppContent'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcContent from '@nextcloud/vue/components/NcContent'
+import NcDialog from '@nextcloud/vue/components/NcDialog'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
 import AppNavigation from './components/AppNavigation.vue'
@@ -94,7 +105,7 @@ import NoteList from './components/NoteList.vue'
 import NoteSidebar from './components/NoteSidebar.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
 import TrashDialog from './components/TrashDialog.vue'
-import { errorMessage } from './api.js'
+import { errorMessage, fetchNoteFolderCandidates } from './api.js'
 import logger from './logger.js'
 import { folderRoute, noteRoute, routeFolder, routeNoteId } from './router.js'
 import { useFoldersStore } from './stores/folders.js'
@@ -116,6 +127,7 @@ export default {
 		NcAppContent,
 		NcButton,
 		NcContent,
+		NcDialog,
 		NcEmptyContent,
 		NoteEditor,
 		NoteList,
@@ -135,6 +147,12 @@ export default {
 			detailsOpen: false,
 			loadError: '',
 			refreshTimer: null,
+			// Other folders with notes, offered if the note folder is empty
+			folderCandidates: [],
+			// The note folder that the candidates were loaded for
+			folderCandidatesPath: null,
+			// The candidate folder whose use the user is asked to confirm
+			folderToUse: null,
 		}
 	},
 
@@ -182,6 +200,37 @@ export default {
 			return sortNotes(notes, sortOrder)
 		},
 
+		/**
+		 * Whether the note folder has no notes at all; only then other folders with notes are suggested
+		 */
+		noteFolderEmpty() {
+			return this.notesStore.loaded
+				&& this.loadError === ''
+				&& this.notesStore.list.length === 0
+				&& this.search === ''
+				&& !this.favoritesOnly
+				&& this.tagsStore.selectedTagIds.length === 0
+				&& !this.tagsStore.untagged
+		},
+
+		/** The note folder for which other folders with notes are needed, null if none are needed */
+		folderCandidatesWanted() {
+			return this.noteFolderEmpty ? this.settingsStore.server.notesPath : null
+		},
+
+		folderSuggestion() {
+			return this.noteFolderEmpty && this.folderCandidatesPath === this.settingsStore.server.notesPath
+				? this.folderCandidates[0] ?? null
+				: null
+		},
+
+		useFolderButtons() {
+			return [
+				{ label: t('qownnotes', 'Cancel') },
+				{ label: t('qownnotes', 'Use folder'), variant: 'primary', callback: this.useFolder },
+			]
+		},
+
 		listHeading() {
 			if (this.favoritesOnly) {
 				return t('qownnotes', 'Favorites')
@@ -194,6 +243,12 @@ export default {
 	},
 
 	watch: {
+		folderCandidatesWanted(notesPath) {
+			if (notesPath !== null && notesPath !== this.folderCandidatesPath) {
+				this.loadFolderCandidates()
+			}
+		},
+
 		selectedNoteId(id) {
 			// Notes that were created by other clients since the last refresh
 			if (id !== null && this.notesStore.loaded && !this.selectedNote) {
@@ -301,6 +356,37 @@ export default {
 
 		restoreVersion(content) {
 			this.$refs.editor?.replaceContent(content)
+		},
+
+		async loadFolderCandidates() {
+			const notesPath = this.settingsStore.server.notesPath
+			try {
+				const candidates = await fetchNoteFolderCandidates()
+				// The note folder may have been changed meanwhile
+				if (notesPath === this.settingsStore.server.notesPath) {
+					this.folderCandidates = candidates
+					this.folderCandidatesPath = notesPath
+				}
+			} catch (error) {
+				logger.warn('Loading the other folders with notes failed', { error })
+			}
+		},
+
+		/**
+		 * Switches the note folder to the confirmed candidate folder; no files are moved
+		 */
+		async useFolder() {
+			const path = this.folderToUse
+			try {
+				await this.settingsStore.save({ notesPath: path })
+			} catch (error) {
+				showError(t('qownnotes', 'The settings could not be saved: {message}', { message: errorMessage(error) }))
+				return
+			}
+
+			showSuccess(t('qownnotes', 'The note folder is now \u201C{path}\u201D', { path: this.settingsStore.server.notesPath }))
+			this.$router.push(folderRoute(null))
+			await this.reloadAll()
 		},
 
 		/**

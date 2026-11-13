@@ -91,6 +91,15 @@ export async function saveSettings(settings) {
 }
 
 /**
+ * Other folders that already contain notes, see docs/api/notes-api.md
+ *
+ * @return {Promise<Array<{path: string, noteCount: number, noteCountCapped: boolean, hasTagDatabase: boolean, sources: string[]}>>}
+ */
+export async function fetchNoteFolderCandidates() {
+	return (await axios.get(`${API_BASE}/settings/note-folder-candidates`)).data
+}
+
+/**
  * Uploads a file into the media (images) or attachments folder of the note folder
  *
  * @param {number} noteId the note that links the file
