@@ -1,5 +1,11 @@
 # QOwnNotes for Nextcloud Changelog
 
+## 26.11.1
+
+- Fix the note folder of the Nextcloud Notes app not being taken over on first use: current versions of the Notes app
+  store it in their JSON settings, so users of a localized Notes folder like `Notizen` got a separate `Notes` folder
+  ([qownnotes-android#54](https://github.com/qownnotes/qownnotes-android/issues/54))
+
 ## 26.11.0
 
 - A **Bookmarks** dialog in the app navigation lists the bookmarks of notes tagged `bookmarks` or named `Bookmarks`,

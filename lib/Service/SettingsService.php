@@ -33,6 +33,9 @@ class SettingsService {
 	public const HEADER_STYLE_ATX = 'atx';
 	public const HEADER_STYLE_SETEXT = 'setext';
 
+	/** App ID of the Nextcloud Notes app, whose note folder is taken over */
+	private const NOTES_APP_ID = 'notes';
+
 	public function __construct(
 		private IConfig $config,
 	) {
@@ -48,13 +51,31 @@ class SettingsService {
 		}
 
 		// Take over the folder of the Nextcloud Notes app, so switching apps keeps the same notes
-		$path = self::normalizePath($this->config->getUserValue($userId, 'notes', 'notesPath', ''));
+		$path = $this->getNotesAppNotesPath($userId);
 		if ($path === '') {
 			$path = self::DEFAULT_NOTES_PATH;
 		}
 
 		$this->config->setUserValue($userId, Application::APP_ID, self::NOTES_PATH, $path);
 		return $path;
+	}
+
+	/**
+	 * Normalized note folder path that the Nextcloud Notes app uses for the user, "" if it has none
+	 *
+	 * The Notes app stores its user settings as JSON object in the user value "settings"; older versions used the
+	 * separate user value "notesPath". The Notes app often stores a localized default name like "Notizen".
+	 */
+	public function getNotesAppNotesPath(string $userId): string {
+		$settings = json_decode((string)$this->config->getUserValue($userId, self::NOTES_APP_ID, 'settings', ''), true);
+		if (is_array($settings) && isset($settings[self::NOTES_PATH]) && is_string($settings[self::NOTES_PATH])) {
+			$path = self::normalizePath($settings[self::NOTES_PATH]);
+			if ($path !== '') {
+				return $path;
+			}
+		}
+
+		return self::normalizePath((string)$this->config->getUserValue($userId, self::NOTES_APP_ID, self::NOTES_PATH, ''));
 	}
 
 	public function getFileSuffix(string $userId): string {
