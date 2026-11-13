@@ -36,7 +36,7 @@ let
     pname = "qownnotes-frontend";
     version = "0.0.0";
     inherit src;
-    npmDepsHash = "sha256-4yYbqWnEw7FjEDDaOXf/yW3AL8/dNupQDTZkGUCOjjA=";
+    npmDepsHash = "sha256-+gnJccJew5ehqtUsonI20uX/14YuZbkwMGp/OVSNpOE=";
     installPhase = ''
       runHook preInstall
       mkdir -p $out
