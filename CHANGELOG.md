@@ -5,6 +5,9 @@
 - Fix the note folder of the Nextcloud Notes app not being taken over on first use: current versions of the Notes app
   store it in their JSON settings, so users of a localized Notes folder like `Notizen` got a separate `Notes` folder
   ([qownnotes-android#54](https://github.com/qownnotes/qownnotes-android/issues/54))
+- Choose the note folder in the settings dialog with the Nextcloud file picker instead of typing its path; the picker
+  shows the notes in each folder, so the right one is easy to recognize, and the path can still be typed
+  ([qownnotes-android#54](https://github.com/qownnotes/qownnotes-android/issues/54))
 - The settings dialog lists other folders that already contain notes, like the localized folder of the Nextcloud
   Notes app or a QOwnNotes Desktop note folder with `notes.sqlite`, and lets you choose one of them; the note folder
   is only changed when you save, and no notes are moved

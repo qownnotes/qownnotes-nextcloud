@@ -50,3 +50,23 @@ export function candidateDescription(candidate) {
 	}
 	return parts.join(' · ')
 }
+
+// Like NoteFolderCandidateService::NOTE_EXTENSIONS
+const NOTE_EXTENSIONS = ['md', 'txt', 'markdown', 'note', 'org']
+
+/**
+ * Whether a file name is a note, by the extensions the server counts as notes and the user's file suffix
+ *
+ * @param {string} name the file name
+ * @param {string} fileSuffix the file extension of new notes, like ".md"
+ * @return {boolean}
+ */
+export function isNoteFileName(name, fileSuffix = '') {
+	const lower = (name ?? '').toLowerCase()
+	if (lower === '' || lower.startsWith('.')) {
+		return false
+	}
+	const suffix = (fileSuffix ?? '').toLowerCase().replace(/^\.+/u, '')
+	const extension = lower.includes('.') ? lower.slice(lower.lastIndexOf('.') + 1) : ''
+	return NOTE_EXTENSIONS.includes(extension) || (suffix !== '' && lower.endsWith('.' + suffix))
+}

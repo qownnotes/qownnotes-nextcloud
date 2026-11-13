@@ -8,6 +8,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router.js'
 
+import '@nextcloud/dialogs/style.css'
 import './css/codeHighlighting.css'
 
 const app = createApp(App)

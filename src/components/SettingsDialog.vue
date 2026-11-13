@@ -12,10 +12,27 @@
 		@update:open="onOpenChanged">
 		<NcAppSettingsSection id="qownnotes-settings-folder" :name="t('qownnotes', 'Note folder')">
 			<div class="settings-dialog__fields">
-				<NcTextField
-					v-model="form.notesPath"
-					:label="t('qownnotes', 'Path of the note folder')"
-					:helperText="t('qownnotes', 'Relative to your files. QOwnNotes Android and other Notes API clients use the same folder. Changing it does not move any notes.')" />
+				<div class="settings-dialog__folder">
+					<NcTextField
+						v-model="form.notesPath"
+						class="settings-dialog__folder-field"
+						:label="t('qownnotes', 'Path of the note folder')"
+						:helperText="t('qownnotes', 'Relative to your files. QOwnNotes Android and other Notes API clients use the same folder. Changing it does not move any notes.')">
+						<template #icon>
+							<FolderOutline :size="20" />
+						</template>
+					</NcTextField>
+					<NcButton
+						class="settings-dialog__folder-button"
+						:aria-label="t('qownnotes', 'Choose the note folder from your files')"
+						:title="t('qownnotes', 'Choose the note folder from your files')"
+						@click="chooseFolder">
+						<template #icon>
+							<FolderSearchOutline :size="20" />
+						</template>
+						{{ t('qownnotes', 'Choose …') }}
+					</NcButton>
+				</div>
 				<NcNoteCard v-if="notesPathChanged" type="warning" class="settings-dialog__card">
 					{{ t('qownnotes', 'Saving switches the note folder to \u201C{path}\u201D for the web interface, QOwnNotes Android and other Notes API clients. No notes are moved.', { path: normalizedNotesPath || DEFAULT_NOTES_PATH }) }}
 				</NcNoteCard>
@@ -124,7 +141,7 @@
 </template>
 
 <script>
-import { showError, showSuccess } from '@nextcloud/dialogs'
+import { FilePickerClosed, getFilePickerBuilder, showError, showSuccess } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { mapStores } from 'pinia'
@@ -136,11 +153,12 @@ import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import FolderOutline from 'vue-material-design-icons/FolderOutline.vue'
+import FolderSearchOutline from 'vue-material-design-icons/FolderSearchOutline.vue'
 import { errorMessage, fetchNoteFolderCandidates } from '../api.js'
 import logger from '../logger.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTagsStore } from '../stores/tags.js'
-import { candidateDescription, normalizeFolderPath } from '../utils/noteFolders.js'
+import { candidateDescription, isNoteFileName, normalizeFolderPath } from '../utils/noteFolders.js'
 
 // Like SettingsService::DEFAULT_NOTES_PATH, used by the server for an empty path
 const DEFAULT_NOTES_PATH = 'Notes'
@@ -150,6 +168,7 @@ export default {
 
 	components: {
 		FolderOutline,
+		FolderSearchOutline,
 		NcAppSettingsDialog,
 		NcAppSettingsSection,
 		NcButton,
@@ -229,6 +248,52 @@ export default {
 			}
 		},
 
+		/**
+		 * Lets the user pick the note folder with the Nextcloud file picker instead of typing its path.
+		 * The folder is only filled in, it is saved with the other settings.
+		 */
+		async chooseFolder() {
+			let chosenPath = null
+			const startPath = this.normalizedNotesPath || this.settingsStore.server.notesPath
+			const picker = getFilePickerBuilder(t('qownnotes', 'Choose note folder'))
+				.setMultiSelect(false)
+				.allowDirectories(true)
+				// Show the notes in the folders too, so the right folder is easy to recognize
+				.setFilter((node) => node.type === 'folder' || isNoteFileName(node.basename, this.form.fileSuffix))
+				.setCanPick((node) => node.type === 'folder')
+				.startAt('/' + normalizeFolderPath(startPath))
+				.setButtonFactory((nodes, currentPath) => {
+					const folderNode = nodes.find((node) => node.type === 'folder')
+					const path = normalizeFolderPath(folderNode?.path ?? currentPath)
+					const folder = path.split('/').pop()
+					return [{
+						label: path === ''
+							? t('qownnotes', 'Open a folder')
+							: t('qownnotes', 'Use \u201C{path}\u201D', { path: folder }),
+						variant: 'primary',
+						disabled: path === '',
+						callback: () => {
+							chosenPath = path
+						},
+					}]
+				})
+				.build()
+
+			try {
+				await picker.pick()
+			} catch (error) {
+				if (!(error instanceof FilePickerClosed)) {
+					logger.error('Choosing the note folder failed', { error })
+					showError(t('qownnotes', 'The folder could not be chosen'))
+				}
+				return
+			}
+
+			if (chosenPath) {
+				this.form.notesPath = chosenPath
+			}
+		},
+
 		onOpenChanged(open) {
 			this.$emit('update:open', open)
 		},
@@ -276,6 +341,24 @@ export default {
 	margin-bottom: 8px;
 	padding-inline: var(--app-settings-section-text-offset);
 	font-weight: bold;
+}
+
+.settings-dialog__folder {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.settings-dialog__folder-field {
+	flex: 1 1 16em;
+	min-width: 0;
+}
+
+/* Align the button with the input field, not with its helper text */
+.settings-dialog__folder-button {
+	flex-shrink: 0;
+	margin-top: 6px;
 }
 
 .settings-dialog__card {

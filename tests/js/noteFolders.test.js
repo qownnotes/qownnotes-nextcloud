@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { candidateDescription, normalizeFolderPath } from '../../src/utils/noteFolders.js'
+import { candidateDescription, isNoteFileName, normalizeFolderPath } from '../../src/utils/noteFolders.js'
 
 describe('normalizeFolderPath', () => {
 	it.each([
@@ -39,5 +39,18 @@ describe('candidateDescription', () => {
 
 	it('omits the count of folders with only a note folder database', () => {
 		expect(candidateDescription({ ...candidate, hasTagDatabase: true, sources: ['tagDatabase'] })).toBe('QOwnNotes note folder')
+	})
+})
+
+describe('isNoteFileName', () => {
+	it('accepts the note extensions of the server and the file suffix of new notes', () => {
+		expect(isNoteFileName('Todo.md')).toBe(true)
+		expect(isNoteFileName('Todo.TXT')).toBe(true)
+		expect(isNoteFileName('Todo.org', '.md')).toBe(true)
+		expect(isNoteFileName('Todo.qon', '.qon')).toBe(true)
+		expect(isNoteFileName('Todo.qon', '.md')).toBe(false)
+		expect(isNoteFileName('notes.sqlite')).toBe(false)
+		expect(isNoteFileName('.hidden.md')).toBe(false)
+		expect(isNoteFileName('')).toBe(false)
 	})
 })
