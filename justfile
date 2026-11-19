@@ -111,6 +111,12 @@ release-check:
     python3 -m unittest discover -s tests/release
     python3 scripts/check-release.py --allow-unreleased
 
+# List GitHub release archive download counts as TSV (tag, archive, downloads)
+[group('release')]
+@release-downloads:
+    gh api --paginate 'repos/qownnotes/qownnotes-nextcloud/releases?per_page=100' \
+        --jq '.[] | .tag_name as $tag | .assets[] | select(.name | endswith(".tar.gz")) | [$tag, .name, .download_count] | @tsv'
+
 # Run the code format checker in CI
 [group('ci')]
 ci-format-check:
