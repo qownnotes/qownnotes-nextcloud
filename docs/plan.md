@@ -390,9 +390,9 @@ With these endpoints Android can later stop downloading and uploading the whole 
 
 Each phase ends with green CI (format check + VM test).
 
-Progress: phases 0–7 are implemented, phase 8 is prepared: release tooling (`release-files.txt`, `docker/sign-app.sh`, `just sign-app`, `create_release.yml`, `docs/release.md`), app store metadata and screenshots, API docs in `docs/api/`, `docs/notes-sqlite.md` and `docs/migration.md`. Still open for phase 8: the app store certificate and registration, the first app store release and the client releases from section 10. Phase 7 notes: the dashboard widget is an API widget (rendered by the dashboard app), unified search also matches tag paths (`#tag` searches only tags), the reference provider is only registered with the web interface, and the Files action is added through the public `BeforeTemplateRenderedEvent` and registered for both file action APIs (`@nextcloud/files` 3 for Nextcloud 32, 4 for 33+).
+Progress: phases 0–7 are implemented. The phase 8 release shipped: [26.10.1](https://github.com/qownnotes/qownnotes-nextcloud/releases/tag/v26.10.1) was the first [Nextcloud App Store](https://apps.nextcloud.com/apps/qownnotes/releases) release, and the Desktop and Android releases in section 10 are available. Phase 7 notes: the dashboard widget is an API widget (rendered by the dashboard app), unified search also matches tag paths (`#tag` searches only tags), the reference provider is only registered with the web interface, and the Files action is added through the public `BeforeTemplateRenderedEvent` and registered for both file action APIs (`@nextcloud/files` 3 for Nextcloud 32, 4 for 33+).
 
-Release preflight is implemented as `just release-check`, with regression tests and shared validation in the draft-release workflow. It checks CalVer, all package version fields, release notes, required manifest inputs, symlinks and app store screenshot paths. Signing additionally requires the built frontend and fails on missing manifest inputs rather than silently omitting them. See the [first-release checklist](release.md#first-release-checklist) for external gates. “Implemented” does not mean every phase's acceptance gate is complete: real patched-client sync checks, signed-archive verification and publication remain pending. Client contracts and synthetic fixtures are not substitutes for those checks. Signing and publication are explicitly out of the current code-and-tests scope, per the user's instruction.
+Release preflight is implemented as `just release-check`, with regression tests and shared validation in the release workflow. It checks CalVer, all package version fields, release notes, required manifest inputs, symlinks and app store screenshot paths. Signing additionally requires the built frontend and fails on missing manifest inputs rather than silently omitting them. See the [release process](release.md). The releases and automated client contract tests do not establish that the manual end-to-end sync checks against a real server are complete.
 
 | Phase                                           | Scope                                                                                                                                                                                                                       | Exit criteria                                                                                                                                                                                                |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -431,18 +431,18 @@ The file is written by up to three parties: QOwnNotes Desktop (locally, synced v
 
 ### QOwnNotes Android (`backend-nextcloud`)
 
-Implemented and pushed in Android commit `5380645`; formatting, unit tests, debug build, Room migrations and tag writer instrumentation tests pass on the API 36 emulator. Real-server SSO/end-to-end acceptance and a client release are still pending.
+Introduced in Android commit `5380645` and shipped in [1.4.0](https://github.com/qownnotes/qownnotes-android/releases/tag/v1.4.0). Formatting, unit tests, the debug build, Room migrations and tag writer instrumentation tests passed during development. Manual real-server SSO and end-to-end checks are follow-up validation.
 
 1. Read capabilities. If `qownnotes` is present and `notes_api_version` contains a supported 1.x (≥1.2), use `qownnotes.api_base` for **both** `NotesApi` and `QOwnNotesApi`.
 2. Otherwise fall back to today's behavior (`/apps/notes/api/v1/` + `/apps/qownnotesapi/api/v1/`, `notes` capability required).
 3. `validateCapabilities` must no longer throw `NotesAppMissing` when only `qownnotes` exists.
 4. Attachment URLs (`MarkdownRenderer.kt`, `AttachmentOpener.kt`) must use the resolved base instead of hardcoded `/apps/notes/api/v1.4/attachment/`.
 5. Store the resolved base per account and re-resolve on capability refresh. A base change triggers a full pull, like a `notesPath` change does.
-6. Later (optional): when `qownnotes_api_version >= 1.1` and `tags.writable`, switch tag sync from whole-file WebDAV to the tags API, and send `X-QOwnNotes-Relink-Tags: 1` instead of relinking locally.
+6. Later (optional): when `qownnotes_api_version` advertises `1.1` and `GET tags` reports that the database is writable, switch tag sync from whole-file WebDAV to the tags API, and send `X-QOwnNotes-Relink-Tags: 1` instead of relinking locally.
 
 ### QOwnNotes Desktop (`src/services/cloudservice.cpp`)
 
-Implemented and pushed in Desktop commit `a921b7819` (26.10.5/build 1398), including asynchronous capability discovery, legacy fallback, detected-app labels and stale-reply generation guards. The Nix Qt6 application build and Qt6 unit suite pass (tests use an isolated configuration and the matching Qt plugin directory). Real-server client acceptance and a client release are still pending.
+Introduced in Desktop commit `a921b7819` and shipped in [26.10.5](https://github.com/pbek/QOwnNotes/releases/tag/v26.10.5), including asynchronous capability discovery, legacy fallback, detected-app labels and stale-reply generation guards. The Nix Qt6 application build and Qt6 unit suite passed during development. Manual real-server checks are follow-up validation.
 
 1. Replace the static `rootPath` with a value resolved from `/ocs/v1.php/cloud/capabilities`: `qownnotes.api_base` if present, else `/index.php/apps/qownnotesapi/api/v1/`.
 2. Settings dialog: show which server app was detected ("QOwnNotes" or "QOwnNotesAPI") and link to the new app in the "app missing" hint.
@@ -450,20 +450,19 @@ Implemented and pushed in Desktop commit `a921b7819` (26.10.5/build 1398), inclu
 
 ### qownnotesapi
 
-- Stays maintained (security and Nextcloud compatibility) for at least a transition period of about 12 months after both client updates ship. It stays the only option for ownCloud.
-- A final feature release adds an admin notice recommending the `qownnotes` app.
+- The [QOwnNotesAPI project](https://github.com/pbek/qownnotesapi) is deprecated and recommends migrating to QOwnNotes for Nextcloud. It remains the option for ownCloud.
 - Both apps can be installed simultaneously. They share no DB tables or routes.
 
 ### Nextcloud Notes app
 
 - Can stay installed. Both apps operate on files, and favorites are shared via file tags.
-- Users who only kept Notes for QOwnNotes Android can uninstall it once their Android client supports `qownnotes`. `notesPath` is taken over automatically (4.11).
+- Administrators who only kept Notes for QOwnNotes Android can uninstall it once all affected users have verified the switch. See the [migration guide](migration.md#for-administrators).
 
 ## 11. Risks and Open Questions
 
 | Risk / question                                                                   | Mitigation / decision needed                                                                                    |
 | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Clients need updates before the new app is useful                                 | Ship client changes with fallback early (they are small). Server and clients can be released independently      |
+| Older clients still need the legacy apps                                          | Keep the legacy apps installed until users have updated and verified the switch                                 |
 | Concurrent edits from desktop (file sync) and web/Android                         | ETag/`If-Match` on all writes. The conflict UI in the web editor. Never auto-merge silently                     |
 | `notes.sqlite` sync conflicts with Desktop                                        | See section 9. Minimal, batched, change-only writes. No background writes                                       |
 | `notes.sqlite` schema changes in Desktop                                          | Version-gated writes (15–16). Read-only fallback. Shared compatibility table across Desktop, Android and server |

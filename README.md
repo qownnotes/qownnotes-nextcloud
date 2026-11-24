@@ -26,7 +26,7 @@ Requirements: Nextcloud 32 to 35, PHP 8.2 to 8.5, and the PHP extension `pdo_sql
 
 ## Installation
 
-The first app store release is still pending. For now, use the [git installation](#from-the-git-repository). Once published, install **QOwnNotes** from the [Nextcloud App Store](https://apps.nextcloud.com/apps/qownnotes) (category "Office"), or with:
+Install **QOwnNotes** from the [Nextcloud App Store](https://apps.nextcloud.com/apps/qownnotes) (**Office & text**), or run:
 
 ```bash
 occ app:install qownnotes

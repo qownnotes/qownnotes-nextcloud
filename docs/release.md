@@ -64,7 +64,7 @@ python3 scripts/publish-appstore.py \
   --signature build/qownnotes-26.10.1.tar.gz.sig
 ```
 
-Replace the example version as appropriate. Never replace published assets to fix a release: ship a new version. API failures produce a failing job; automatic publication does not replace the first-release client acceptance checks below.
+Replace the example version as appropriate. Never replace published assets to fix a release: ship a new version. API failures produce a failing job; automatic publication does not replace manual client sync checks.
 
 ## Local signing fallback
 
@@ -97,10 +97,8 @@ These development builds are **unsigned**, intended for testing, and may produce
 
 - [x] App store metadata, screenshots, release manifest, signing scripts and approval-gated release workflow are in the repository.
 - [x] Local release preflight and its regression tests are shared with CI.
-- [ ] Obtain the app-specific `qownnotes` certificate and register the app. A certificate for another app ID cannot be reused.
-- [ ] Verify the signed archive with Nextcloud, upload it to a GitHub release and publish it in the app store.
-- [ ] Ship Desktop and Android capability-discovery changes with legacy fallback (see [the plan](plan.md#10-client-changes-and-migration)); record the first supported client versions in the migration guide.
+- [x] Obtain the app-specific `qownnotes` certificate and register the app. A certificate for another app ID cannot be reused.
+- [x] Verify the signed archive with Nextcloud, upload it to a GitHub release and publish it in the app store ([26.10.1 release workflow](https://github.com/qownnotes/qownnotes-nextcloud/actions/runs/38788422129)).
+- [x] Ship Desktop and Android capability-discovery changes with legacy fallback and record the first supported versions in the [migration guide](migration.md#which-clients-use-which-app).
 - [x] Capture genuine schema-15 and Android-written databases with provenance and compatibility tests.
-- [ ] Perform the manual client sync checks described in the plan.
-
-The preflight does not claim that signing, app store publication or client acceptance testing has succeeded. Those require external credentials or client runtimes and are separate release gates.
+- [ ] Follow up with the manual client sync checks described in the [plan](plan.md#10-client-changes-and-migration). Neither preflight nor publication verifies these checks.
